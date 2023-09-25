@@ -1,0 +1,3 @@
+rootProject.name = 'kafka-tests'
+include("app")
+
