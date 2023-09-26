@@ -54,7 +54,7 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
 
     List<TestContainerUtils.HServerCliOpts> hserverConfs = new ArrayList<>(CLUSTER_SIZE);
     for (int i = 0; i < CLUSTER_SIZE; ++i) {
-      int offset = count.incrementAndGet();
+      int offset = count.getAndIncrement();
       int hserverPort = 9092 + offset;
       int hserverGossipPort = 65000 + offset;
       TestContainerUtils.HServerCliOpts options = new TestContainerUtils.HServerCliOpts();
@@ -85,7 +85,7 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
 
   @Override
   public void afterEach(ExtensionContext context) throws Exception {
-    Thread.sleep(100);
+    Thread.sleep(500);
 
     // waiting for servers to flush logs
     for (int i = 0; i < hservers.size(); i++) {
