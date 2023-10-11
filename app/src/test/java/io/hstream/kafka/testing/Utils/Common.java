@@ -3,14 +3,21 @@ package io.hstream.kafka.testing.Utils;
 import static org.assertj.core.api.Assertions.*;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -19,13 +26,11 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 public class Common {
-  private static final Logger logger = LoggerFactory.getLogger(Common.class);
-
   private static final Random rand = new Random(System.currentTimeMillis());
 
   public static void createTopic(AdminClient client, String name, int partitions, short replica) {
@@ -155,15 +160,101 @@ public class Common {
   }
 
   private static void printFlag(String flag, ExtensionContext context) {
-    logger.info(
+    log.info(
         "=====================================================================================");
-    logger.info(
+    log.info(
         "{} {} {} {}",
         flag,
         context.getRequiredTestInstance().getClass().getSimpleName(),
         context.getTestMethod().get().getName(),
         context.getDisplayName());
-    logger.info(
+    log.info(
         "=====================================================================================");
+  }
+
+  @SneakyThrows
+  static public <T> ArrayList<T> runConcurrently(List<Supplier<T>> runners) {
+    var ts = new LinkedList<Thread>();
+    var result = new ArrayList<T>(Collections.nCopies(runners.size(), null));
+    AtomicBoolean success = new AtomicBoolean(true);
+    for (var i = 0; i < runners.size(); i++) {
+      final int idx = i;
+      final var runner = runners.get(i);
+      var t = new Thread(() -> {
+        try {
+          var r = runner.get();
+          synchronized (result) {
+            result.set(idx, r);
+          }
+        } catch (Exception e) {
+          success.set(false);
+          log.error("runner:{}", idx, e);
+        }
+      });
+      t.start();
+      ts.add(t);
+    }
+    for (var t : ts) {
+      t.join();
+    }
+    Assertions.assertTrue(success.get());
+    return result;
+  }
+
+  static public <K, V> List<Map<TopicPartition, List<ConsumerRecord<K, V>>>> _pollConcurrently(List<Consumer<K, V>> consumers, int timeoutMs, int pollCount) {
+    return Common.runConcurrently(consumers.stream()
+            .map(c -> (Supplier<Map<TopicPartition, List<ConsumerRecord<K, V>>>>) () -> {
+                var crs = new LinkedList<ConsumerRecords<K, V>>();
+                for (int i = 0; i < pollCount; i++) {
+                  crs.add(c.poll(timeoutMs));
+                }
+                return mergeConsumerRecords(crs);
+              })
+            .collect(Collectors.toList()));
+  }
+
+  static public <K, V> Map<TopicPartition, List<ConsumerRecord<K, V>>> pollConcurrently(List<Consumer<K, V>> consumers, int timeoutMs, int pollCount) {
+    var result = new HashMap<TopicPartition, List<ConsumerRecord<K, V>>>();
+    for (var rs : _pollConcurrently(consumers, timeoutMs, pollCount)) {
+      result.putAll(rs);
+    }
+    return result;
+  }
+
+  static public <K, V> Map<TopicPartition, List<ConsumerRecord<K, V>>> pollConcurrently(List<Consumer<K, V>> consumers, int timeoutMs) {
+    return pollConcurrently(consumers, timeoutMs, 1);
+  }
+
+  static public <K, V> Map<TopicPartition, List<ConsumerRecord<K, V>>> mergeConsumerRecords(List<ConsumerRecords<K, V>> consumerRecordsList) {
+    var result = new HashMap<TopicPartition, List<ConsumerRecord<K, V>>>();
+    for (var rs : consumerRecordsList) {
+      for (var tp : rs.partitions()) {
+        if (!result.containsKey(tp)) {
+          result.put(tp, new LinkedList<>());
+        }
+        result.get(tp).addAll(rs.records(tp));
+      }
+    }
+    return result;
+  }
+
+  static public <K, V> void assertBalancedAssignment(List<Consumer<K, V>> consumers, int total) {
+    var expected = total / consumers.size();
+    for (var consumer : consumers) {
+      Assertions.assertEquals(expected, consumer.assignment().size(), "unbalanced assignment");
+    }
+  }
+
+  static public <K, V> void assertAssignment(List<Consumer<K, V>> consumers, int partitions) {
+    var totalSet = new HashSet<TopicPartition>();
+    for (var i = 0; i < consumers.size(); i++) {
+      var intersection = new HashSet<>(totalSet);
+      var cSet = consumers.get(i).assignment();
+      log.info("consumer assignment, consumer:{}, assignment:{}", i, consumers.get(i).assignment());
+      intersection.retainAll(cSet);
+      Assertions.assertTrue(intersection.isEmpty(), String.format("found duplicated assignment:%s", intersection.toString()));
+      totalSet.addAll(cSet);
+    }
+    Assertions.assertEquals(partitions, totalSet.size(), "uncompleted assignment");
   }
 }

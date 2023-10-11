@@ -1,20 +1,20 @@
 package io.hstream.kafka.testing;
 
 import static io.hstream.kafka.testing.Utils.Common.*;
-import static org.assertj.core.api.Assertions.*;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.hstream.kafka.testing.Utils.Common;
+import io.hstream.kafka.testing.Utils.ConsumerBuilder;
+import lombok.SneakyThrows;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,26 +46,152 @@ public class ConsumerTest {
     client.close();
   }
 
+  List<Consumer<byte[], byte[]>> createConsumersAndPoll(String topic, String group, int consumerCount) {
+    var consumers = createConsumers(topic, group, consumerCount);
+    pollConcurrently(consumers, 8000);
+    return consumers;
+  }
+
+  @SneakyThrows
+  List<Consumer<byte[], byte[]>> createConsumers(String topic, String group, int consumerCount) {
+    var consumers = new LinkedList<Consumer<byte[], byte[]>>();
+    AtomicBoolean success = new AtomicBoolean(true);
+    for (int i = 0; i < consumerCount; i++) {
+      var consumer = new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).build();
+      consumers.add(consumer);
+      consumer.subscribe(List.of(topic));
+    }
+    Assertions.assertTrue(success.get());
+    return consumers;
+  }
+
   @Test
   @Timeout(40)
-  void testSimpleConsumption() throws ExecutionException, InterruptedException, TimeoutException {
-    var numRecords = 10000;
-    var topic = randomTopicName("testSimpleConsumption");
+  void testSingleConsumerWithEmptyTopic() throws Exception {
+    var topic = randomTopicName("abc_topic_");
+    createTopic(client, topic, 1, (short) 1);
+    var consumers = createConsumersAndPoll(topic, "group01", 1);
+    Common.assertAssignment(consumers, 1);
+  }
 
-    try (var producer = createByteProducer(HStreamUrl);
-        var consumer = createBytesConsumer(HStreamUrl)) {
-      try {
-        createTopic(client, topic, 2, (short) 2);
+  @Test
+  @Timeout(40)
+  void testSingleConsumerWithEmptyTopicAndMultiPartitions() throws Exception {
+    var topic = randomTopicName("abc_topic_");
+    createTopic(client, topic, 3, (short) 1);
+    var consumers = createConsumersAndPoll(topic, "group01", 1);
+    Common.assertAssignment(consumers, 3);
+  }
 
-        var tp = new TopicPartition(topic, 0);
-        sendBytesRecords(producer, numRecords, tp);
+  @Test
+  @Timeout(40)
+  void testMultiConsumerWithEmptyTopicAndSinglePartition() throws Exception {
+    var group = "group01";
+    var topic = randomTopicName("abc_topic_");
+    createTopic(client, topic, 1, (short) 1);
+    var consumers = createConsumersAndPoll(topic, group, 3);
+    Common.assertAssignment(consumers, 1);
+  }
 
-        assertThat(consumer.assignment()).isEmpty();
-        assertThatNoException().isThrownBy(() -> consumer.assign(List.of(tp)));
-        assertThat(consumer.assignment()).containsExactly(tp);
-      } finally {
-        client.deleteTopics(List.of(topic)).all().get(10, TimeUnit.SECONDS);
-      }
+  @Test
+  @Timeout(40)
+  void testMultiConsumerWithEmptyTopicAndMultiPartitions() throws Exception {
+    var group = "group01";
+    var topic = randomTopicName("abc_topic_");
+    createTopic(client, topic, 3, (short) 1);
+    var consumers = createConsumersAndPoll(topic, group, 3);
+    Common.assertAssignment(consumers, 3);
+    Common.assertBalancedAssignment(consumers, 3);
+  }
+
+  @Test
+  @Timeout(40)
+  void testJoinGroupRebalance() throws Exception {
+    var group = "group01";
+    var topic = randomTopicName("abc_topic_");
+    createTopic(client, topic, 3, (short) 1);
+    var consumers = createConsumersAndPoll(topic, group, 2);
+    logger.info("first phase assignment:");
+    Common.assertAssignment(consumers, 3);
+
+    var newConsumer = new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).build();
+    newConsumer.subscribe(List.of(topic));
+    consumers.add(newConsumer);
+
+    pollConcurrently(consumers, 2000, 5);
+    logger.info("rebalanced assignment:");
+    Common.assertAssignment(consumers, 3);
+    Common.assertBalancedAssignment(consumers, 3);
+  }
+
+  @Test
+  @Timeout(40)
+  void testSingleConsumer() {
+    var group = "group01";
+    var topic = randomTopicName("abc_topic_");
+    createTopic(client, topic, 1, (short) 1);
+    var producer = createByteProducer(HStreamUrl);
+    sendBytesRecords(producer, 10, new TopicPartition(topic, 0));
+
+    var consumer = createConsumers(topic, group, 1).get(0);
+    consumer.subscribe(List.of(topic));
+    var records = consumer.poll(10000);
+    Assertions.assertEquals(10, records.count());
+  }
+
+  @Test
+  @Timeout(40)
+  void testSingleConsumerWithMultiPartitions() throws Exception {
+    var topic = randomTopicName("abc_topic_");
+    var partitions = 3;
+    createTopic(client, topic, partitions, (short) 1);
+    var producer = createByteProducer(HStreamUrl);
+    for (int i = 0; i < partitions; i++) {
+      sendBytesRecords(producer, 10, new TopicPartition(topic, i));
+    }
+
+    var consumers = createConsumers(topic, "group01", 1);
+    var result = pollConcurrently(consumers, 8000);
+    Common.assertAssignment(consumers, 3);
+    for (int i = 0; i < partitions; i++) {
+      Assertions.assertEquals(10, result.get(new TopicPartition(topic, i)).size());
+      // TODO: check result data
+    }
+  }
+
+  @Test
+  @Timeout(40)
+  void testMultiConsumerWithSinglePartition() throws Exception {
+    var topic = randomTopicName("abc_topic_");
+    createTopic(client, topic, 1, (short) 1);
+    var producer = createByteProducer(HStreamUrl);
+    sendBytesRecords(producer, 10, new TopicPartition(topic, 0));
+
+    var consumers = createConsumers(topic, "group01", 3);
+    var result = pollConcurrently(consumers, 8000);
+    Common.assertAssignment(consumers, 1);
+    Assertions.assertEquals(10, result.get(new TopicPartition(topic, 0)).size());
+    // TODO: check result data
+  }
+
+  @Test
+  @Timeout(40)
+  void testMultiConsumerWithMultiPartitions() {
+    var topic = randomTopicName("abc_topic_");
+    var partitions = 3;
+    createTopic(client, topic, partitions, (short) 1);
+    var producer = createByteProducer(HStreamUrl);
+    for (int i = 0; i < partitions; i++) {
+      sendBytesRecords(producer, 10, new TopicPartition(topic, i));
+    }
+
+    var consumers = createConsumers(topic, "group01", 3);
+    var result = pollConcurrently(consumers, 8000);
+    Common.assertAssignment(consumers, 3);
+    Common.assertBalancedAssignment(consumers, 3);
+    for (int i = 0; i < partitions; i++) {
+      Assertions.assertEquals(10, result.get(new TopicPartition(topic, i)).size());
+      // TODO: check result data
     }
   }
 }
