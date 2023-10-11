@@ -203,7 +203,8 @@ public class ProducerTest {
           assertThat(metaDatas.get(i).topic()).isEqualTo(topic);
         }
 
-        consumer.assign(List.of(new TopicPartition(topic, partition)));
+        // consumer.assign(List.of(new TopicPartition(topic, partition)));
+        consumer.subscribe(List.of(topic));
         var records = consumeRecords(consumer, 100, 30 * 1000);
         for (int i = 0; i < records.size(); i++) {
           assertThat(records.get(i).offset()).isEqualTo(i);

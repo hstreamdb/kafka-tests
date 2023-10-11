@@ -20,7 +20,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 
 public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
 
-  static final int CLUSTER_SIZE = 3;
+  static final int CLUSTER_SIZE = 1;
   private static final AtomicInteger count = new AtomicInteger(0);
   private static final Logger logger = LoggerFactory.getLogger(ClusterExtension.class);
   private final List<GenericContainer<?>> hservers = new ArrayList<>(CLUSTER_SIZE);

@@ -33,10 +33,16 @@ dependencies {
     testImplementation "org.testcontainers:junit-jupiter:1.19.0"
     testImplementation "org.testcontainers:toxiproxy:1.19.0"
 
-    //    testImplementation 'org.apache.kafka:kafka-clients:0.11.0.3'
+    // testImplementation 'org.apache.kafka:kafka-clients:0.11.0.3'
     testImplementation 'org.apache.kafka:kafka-clients:0.11.0.0'
-    //    testImplementation 'org.apache.kafka:kafka-clients:1.1.1'
+    // testImplementation 'org.apache.kafka:kafka-clients:1.0.0'
+    // testImplementation 'org.apache.kafka:kafka-clients:1.1.1'
+    // testImplementation 'org.apache.kafka:kafka-clients:3.5.1'
     testImplementation 'com.github.docker-java:docker-java:3.3.3'
+
+    // lombok
+    testCompileOnly 'org.projectlombok:lombok:1.18.24'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
 
     compileOnly 'org.slf4j:slf4j-api:1.7.30'
     testImplementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.17.0'
