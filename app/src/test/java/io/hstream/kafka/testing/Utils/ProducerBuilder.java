@@ -70,6 +70,7 @@ public class ProducerBuilder<K, V> {
     props.put("linger.ms", lingerMs);
     props.put("buffer.memory", bufferSize);
     props.put("max.block.ms", blockMs);
+    props.put("enable.idempotence", false);
     return new KafkaProducer<>(props);
   }
 }
