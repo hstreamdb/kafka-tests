@@ -1,9 +1,6 @@
 package io.hstream.kafka.testing;
 
-import io.hstream.kafka.testing.Utils.Common;
-import io.hstream.kafka.testing.Utils.ConsumerBuilder;
 import io.hstream.kafka.testing.Utils.RawConsumerBuilder;
-import lombok.SneakyThrows;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -16,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.hstream.kafka.testing.Utils.Common.*;
 

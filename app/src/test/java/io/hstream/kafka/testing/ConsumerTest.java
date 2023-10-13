@@ -10,18 +10,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import io.hstream.kafka.testing.Utils.Common;
 import io.hstream.kafka.testing.Utils.ConsumerBuilder;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+@Slf4j
 @ExtendWith(ClusterExtension.class)
 public class ConsumerTest {
-  private static final Logger logger = LoggerFactory.getLogger(ConsumerTest.class);
   private String HStreamUrl = "127.0.0.1:9092";
   private AdminClient client;
 
@@ -36,7 +35,7 @@ public class ConsumerTest {
     try {
       client = AdminClient.create(adminProps);
     } catch (Exception e) {
-      logger.error("create admin client failed: {}", e.toString());
+      log.error("create admin client failed: {}", e.toString());
       throw e;
     }
   }
@@ -111,7 +110,7 @@ public class ConsumerTest {
     var topic = randomTopicName("abc_topic_");
     createTopic(client, topic, 3, (short) 1);
     var consumers = createConsumersAndPoll(topic, group, 2);
-    logger.info("first phase assignment:");
+    log.info("first phase assignment:");
     Common.assertAssignment(consumers, 3);
 
     var newConsumer = new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).build();
@@ -119,7 +118,7 @@ public class ConsumerTest {
     consumers.add(newConsumer);
 
     pollConcurrently(consumers, 2000, 5);
-    logger.info("rebalanced assignment:");
+    log.info("rebalanced assignment:");
     Common.assertAssignment(consumers, 3);
     Common.assertBalancedAssignment(consumers, 3);
   }
@@ -154,7 +153,9 @@ public class ConsumerTest {
     var result = pollConcurrently(consumers, 8000);
     Common.assertAssignment(consumers, 3);
     for (int i = 0; i < partitions; i++) {
-      Assertions.assertEquals(10, result.get(new TopicPartition(topic, i)).size());
+      var tp = new TopicPartition(topic, i);
+      Assertions.assertNotNull(result.get(tp));
+      Assertions.assertEquals(10, result.get(tp).size());
       // TODO: check result data
     }
   }
@@ -193,5 +194,46 @@ public class ConsumerTest {
       Assertions.assertEquals(10, result.get(new TopicPartition(topic, i)).size());
       // TODO: check result data
     }
+  }
+
+  // also tested leave group
+  @Test
+  @Timeout(60)
+  void testCommitAndFetchOffsets() throws Exception {
+    var group = "group01";
+    var topic = randomTopicName("abc");
+    createTopic(client, topic, 1, (short) 1);
+    var producer = createByteProducer(HStreamUrl);
+    var tp = new TopicPartition(topic, 0);
+    sendBytesRecords(producer, 10, tp);
+
+    var consumer1 = new ConsumerBuilder<byte[], byte[]>(HStreamUrl)
+            .groupId(group)
+            .autoCommit(false).build();
+    consumer1.subscribe(List.of(topic));
+    var records = consumer1.poll(8000);
+    Assertions.assertEquals(10, records.count());
+
+    log.info("committing offsets");
+    consumer1.commitSync();
+    log.info("committed offsets");
+    consumer1.close();
+    log.info("closed consumer1");
+
+    // waiting server to handle leave group and re-balance
+    Thread.sleep(8000);
+
+    sendBytesRecords(producer, 10, tp);
+    log.info("wrote another 10 records");
+
+    var consumer2 = new ConsumerBuilder<byte[], byte[]>(HStreamUrl)
+            .groupId(group)
+            .autoCommit(false).build();
+    consumer2.subscribe(List.of(topic));
+    var newRecords = consumer2.poll(8000);
+    Assertions.assertEquals(10, newRecords.count());
+    consumer2.commitSync();
+    var offsets = consumer2.endOffsets(List.of(tp));
+    log.info("current offsets: {}", offsets);
   }
 }
