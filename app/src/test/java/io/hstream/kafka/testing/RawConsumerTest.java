@@ -1,6 +1,11 @@
 package io.hstream.kafka.testing;
 
+import static io.hstream.kafka.testing.Utils.Common.*;
+
 import io.hstream.kafka.testing.Utils.RawConsumerBuilder;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Properties;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -9,12 +14,6 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Properties;
-
-import static io.hstream.kafka.testing.Utils.Common.*;
 
 @ExtendWith(ClusterExtension.class)
 public class RawConsumerTest {
