@@ -166,7 +166,7 @@ public class TestContainerUtils {
     String testClassName = context.getRequiredTestClass().getSimpleName();
     String testName = context.getTestMethod().get().getName();
     String filePathFromProject =
-        "logs/" + testClassName + "/" + testName + "/" + grp + "/" + entryName;
+        ".logs/" + testClassName + "/" + testName + "/" + grp + "/" + entryName;
     logger.info("log to " + filePathFromProject);
     String fileName = "../" + filePathFromProject;
 
