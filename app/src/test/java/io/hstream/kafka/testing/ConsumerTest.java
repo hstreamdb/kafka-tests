@@ -2,13 +2,12 @@ package io.hstream.kafka.testing;
 
 import static io.hstream.kafka.testing.Utils.Common.*;
 
+import io.hstream.kafka.testing.Utils.Common;
+import io.hstream.kafka.testing.Utils.ConsumerBuilder;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import io.hstream.kafka.testing.Utils.Common;
-import io.hstream.kafka.testing.Utils.ConsumerBuilder;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -45,7 +44,8 @@ public class ConsumerTest {
     client.close();
   }
 
-  List<Consumer<byte[], byte[]>> createConsumersAndPoll(String topic, String group, int consumerCount) {
+  List<Consumer<byte[], byte[]>> createConsumersAndPoll(
+      String topic, String group, int consumerCount) {
     var consumers = createConsumers(topic, group, consumerCount);
     pollConcurrently(consumers, 8000);
     return consumers;
@@ -207,9 +207,8 @@ public class ConsumerTest {
     var tp = new TopicPartition(topic, 0);
     sendBytesRecords(producer, 10, tp);
 
-    var consumer1 = new ConsumerBuilder<byte[], byte[]>(HStreamUrl)
-            .groupId(group)
-            .autoCommit(false).build();
+    var consumer1 =
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
     consumer1.subscribe(List.of(topic));
     var records = consumer1.poll(8000);
     Assertions.assertEquals(10, records.count());
@@ -226,9 +225,8 @@ public class ConsumerTest {
     sendBytesRecords(producer, 10, tp);
     log.info("wrote another 10 records");
 
-    var consumer2 = new ConsumerBuilder<byte[], byte[]>(HStreamUrl)
-            .groupId(group)
-            .autoCommit(false).build();
+    var consumer2 =
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
     consumer2.subscribe(List.of(topic));
     var newRecords = consumer2.poll(8000);
     Assertions.assertEquals(10, newRecords.count());

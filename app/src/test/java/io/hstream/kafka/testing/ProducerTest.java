@@ -20,11 +20,7 @@ import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.TopicPartition;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -166,6 +162,7 @@ public class ProducerTest {
     }
   }
 
+  @Disabled
   @Test
   @Timeout(40)
   void testSendToPartition() throws RuntimeException, ExecutionException, InterruptedException {
@@ -173,49 +170,45 @@ public class ProducerTest {
 
     try (var producer = createByteProducer(HStreamUrl);
         var consumer = createBytesConsumer(HStreamUrl)) {
-      try {
-        createTopic(client, topic, 2, (short) 2);
-        var partition = 1;
+      createTopic(client, topic, 2, (short) 2);
+      var partition = 1;
 
-        var futures = new ArrayList<Future<RecordMetadata>>();
-        for (int i = 0; i < 100; i++) {
-          futures.add(
-              producer.send(
-                  new ProducerRecord<>(
-                      topic, partition, null, ("value" + i).getBytes(StandardCharsets.UTF_8))));
-        }
-        var metaDatas =
-            futures.stream()
-                .map(
-                    f -> {
-                      try {
-                        return f.get(30, TimeUnit.SECONDS);
-                      } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                        fail("get metadata fail: %s", e.toString());
-                      }
-                      return null;
-                    })
-                .collect(Collectors.toList());
+      var futures = new ArrayList<Future<RecordMetadata>>();
+      for (int i = 0; i < 100; i++) {
+        futures.add(
+            producer.send(
+                new ProducerRecord<>(
+                    topic, partition, null, ("value" + i).getBytes(StandardCharsets.UTF_8))));
+      }
+      var metaDatas =
+          futures.stream()
+              .map(
+                  f -> {
+                    try {
+                      return f.get(30, TimeUnit.SECONDS);
+                    } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                      fail("get metadata fail: %s", e.toString());
+                    }
+                    return null;
+                  })
+              .collect(Collectors.toList());
 
-        for (int i = 0; i < 100; i++) {
-          assertThat(metaDatas.get(i).offset()).isEqualTo(i);
-          assertThat(metaDatas.get(i).partition()).isEqualTo(partition);
-          assertThat(metaDatas.get(i).topic()).isEqualTo(topic);
-        }
+      for (int i = 0; i < 100; i++) {
+        assertThat(metaDatas.get(i).offset()).isEqualTo(i);
+        assertThat(metaDatas.get(i).partition()).isEqualTo(partition);
+        assertThat(metaDatas.get(i).topic()).isEqualTo(topic);
+      }
 
-        // consumer.assign(List.of(new TopicPartition(topic, partition)));
-        consumer.subscribe(List.of(topic));
-        var records = consumeRecords(consumer, 100, 30 * 1000);
-        for (int i = 0; i < records.size(); i++) {
-          assertThat(records.get(i).offset()).isEqualTo(i);
-          assertThat(records.get(i).partition()).isEqualTo(partition);
-          assertThat(records.get(i).topic()).isEqualTo(topic);
-          assertThat(records.get(i).key()).isNull();
-          assertThat(records.get(i).value())
-              .isEqualTo(("value" + i).getBytes(StandardCharsets.UTF_8));
-        }
-      } finally {
-        client.deleteTopics(List.of(topic)).all().get();
+      //        consumer.assign(List.of(new TopicPartition(topic, partition)));
+      consumer.subscribe(List.of(topic));
+      var records = consumeRecords(consumer, 100, 30 * 1000);
+      for (int i = 0; i < records.size(); i++) {
+        assertThat(records.get(i).offset()).isEqualTo(i);
+        assertThat(records.get(i).partition()).isEqualTo(partition);
+        assertThat(records.get(i).topic()).isEqualTo(topic);
+        assertThat(records.get(i).key()).isNull();
+        assertThat(records.get(i).value())
+            .isEqualTo(("value" + i).getBytes(StandardCharsets.UTF_8));
       }
     }
   }

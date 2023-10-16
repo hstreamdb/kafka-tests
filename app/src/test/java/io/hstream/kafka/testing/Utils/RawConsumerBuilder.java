@@ -1,9 +1,8 @@
 package io.hstream.kafka.testing.Utils;
 
+import java.util.Properties;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-
-import java.util.Properties;
 
 public class RawConsumerBuilder<K, V> {
   private final String hosts;
