@@ -79,11 +79,10 @@ public class ProducerTest {
           }
         };
 
-    try (var producer = createByteProducer(HStreamUrl)) {
-      try {
-        createTopic(client, topic, 1, (short) 2);
-
-        var partition = 0;
+    try {
+      createTopic(client, topic, 1, (short) 2);
+      var partition = 0;
+      try (var producer = createByteProducer(HStreamUrl)) {
         var record0 =
             new ProducerRecord<>(
                 topic,
@@ -122,9 +121,9 @@ public class ProducerTest {
           assertThat(producer.send(record0, callBack).get(10, TimeUnit.SECONDS).offset())
               .isEqualTo(i + 4);
         }
-      } finally {
-        client.deleteTopics(List.of(topic)).all().get();
       }
+    } finally {
+      client.deleteTopics(List.of(topic)).all().get();
     }
   }
 
@@ -135,11 +134,11 @@ public class ProducerTest {
           + "with correct returned offset metadata")
   void testClose() throws ExecutionException, InterruptedException {
     var topic = randomTopicName("testClose");
+    try {
+      createTopic(client, topic, 1, (short) 2);
+      var partition = 0;
 
-    try (var producer = createByteProducer(HStreamUrl)) {
-      try {
-        createTopic(client, topic, 1, (short) 2);
-        var partition = 0;
+      try (var producer = createByteProducer(HStreamUrl)) {
         var record0 =
             new ProducerRecord<>(
                 topic,
@@ -157,9 +156,9 @@ public class ProducerTest {
             .as("The last message should be acked before producer is shutdown")
             .succeedsWithin(10, TimeUnit.SECONDS);
         assertThat(response.get().offset()).as("Should have offset 100").isEqualTo(100);
-      } finally {
-        client.deleteTopics(List.of(topic)).all().get();
       }
+    } finally {
+      client.deleteTopics(List.of(topic)).all().get();
     }
   }
 
@@ -167,12 +166,11 @@ public class ProducerTest {
   @Timeout(40)
   void testSendToPartition() throws RuntimeException, ExecutionException, InterruptedException {
     var topic = randomTopicName("testSendToPartition");
-
-    try (var producer = createByteProducer(HStreamUrl);
-        var consumer = createBytesConsumer(HStreamUrl)) {
-      try {
-        createTopic(client, topic, 2, (short) 2);
-        var partition = 1;
+    try {
+      createTopic(client, topic, 2, (short) 2);
+      var partition = 1;
+      try (var producer = createByteProducer(HStreamUrl);
+          var consumer = createBytesConsumer(HStreamUrl)) {
 
         var futures = new ArrayList<Future<RecordMetadata>>();
         for (int i = 0; i < 100; i++) {
@@ -214,9 +212,9 @@ public class ProducerTest {
           assertThat(records.get(i).value())
               .isEqualTo(("value" + i).getBytes(StandardCharsets.UTF_8));
         }
-      } finally {
-        client.deleteTopics(List.of(topic)).all().get();
       }
+    } finally {
+      client.deleteTopics(List.of(topic)).all().get();
     }
   }
 
@@ -226,15 +224,15 @@ public class ProducerTest {
   void testFlush() throws ExecutionException, InterruptedException, RuntimeException {
     var topic = randomTopicName("testFlush");
 
-    try (var producer =
-        new ProducerBuilder<byte[], byte[]>(HStreamUrl)
-            .lingerMs(Integer.MAX_VALUE)
-            .keySerializer("org.apache.kafka.common.serialization.ByteArraySerializer")
-            .valueSerializer("org.apache.kafka.common.serialization.ByteArraySerializer")
-            .build()) {
-      try {
-        createTopic(client, topic, 2, (short) 2);
-        var recordCnt = 50;
+    try {
+      createTopic(client, topic, 2, (short) 2);
+      var recordCnt = 50;
+      try (var producer =
+          new ProducerBuilder<byte[], byte[]>(HStreamUrl)
+              .lingerMs(Integer.MAX_VALUE)
+              .keySerializer("org.apache.kafka.common.serialization.ByteArraySerializer")
+              .valueSerializer("org.apache.kafka.common.serialization.ByteArraySerializer")
+              .build()) {
         var record =
             new ProducerRecord<byte[], byte[]>(topic, "value".getBytes(StandardCharsets.UTF_8));
         var responses = new ArrayList<Future<RecordMetadata>>();
@@ -245,9 +243,9 @@ public class ProducerTest {
           responses.forEach(f -> assertThat(f.isDone()).as("All requests are complete").isTrue());
           responses.clear();
         }
-      } finally {
-        client.deleteTopics(List.of(topic)).all().get();
       }
+    } finally {
+      client.deleteTopics(List.of(topic)).all().get();
     }
   }
 }
