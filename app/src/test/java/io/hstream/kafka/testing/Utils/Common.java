@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -203,8 +204,12 @@ public class Common {
     return result;
   }
 
+  /**
+   * @param pollMs: consumer.poll(pollMs), not total timeout
+   */
   public static <K, V> List<Map<TopicPartition, List<ConsumerRecord<K, V>>>> _pollConcurrently(
-      List<Consumer<K, V>> consumers, int timeoutMs, int pollCount) {
+      List<Consumer<K, V>> consumers, int minTotalRecords, int pollMs) {
+    var totalRecords = new AtomicInteger(0);
     return Common.runConcurrently(
         consumers.stream()
             .map(
@@ -212,26 +217,58 @@ public class Common {
                     (Supplier<Map<TopicPartition, List<ConsumerRecord<K, V>>>>)
                         () -> {
                           var crs = new ArrayList<ConsumerRecords<K, V>>();
-                          for (int i = 0; i < pollCount; i++) {
-                            crs.add(c.poll(timeoutMs));
+                          while (totalRecords.get() < minTotalRecords) {
+                            var rs = c.poll(pollMs);
+                            crs.add(rs);
+                            totalRecords.addAndGet(rs.count());
                           }
                           return mergeConsumerRecords(crs);
                         })
             .collect(Collectors.toList()));
   }
 
+  /**
+   * @param pollMs: consumer.poll(pollMs), not total timeout
+   */
   public static <K, V> Map<TopicPartition, List<ConsumerRecord<K, V>>> pollConcurrently(
-      List<Consumer<K, V>> consumers, int timeoutMs, int pollCount) {
+      List<Consumer<K, V>> consumers, int minTotalRecords, int pollMs) {
     var result = new HashMap<TopicPartition, List<ConsumerRecord<K, V>>>();
-    for (var rs : _pollConcurrently(consumers, timeoutMs, pollCount)) {
+    for (var rs : _pollConcurrently(consumers, minTotalRecords, pollMs)) {
       result.putAll(rs);
     }
     return result;
   }
 
   public static <K, V> Map<TopicPartition, List<ConsumerRecord<K, V>>> pollConcurrently(
-      List<Consumer<K, V>> consumers, int timeoutMs) {
-    return pollConcurrently(consumers, timeoutMs, 1);
+      List<Consumer<K, V>> consumers, int minTotalRecords) {
+    return pollConcurrently(consumers, minTotalRecords, 100);
+  }
+
+  /**
+   * @param pollMs: consumer.poll(pollMs), not total timeout
+   */
+  public static <K, V> Map<TopicPartition, List<ConsumerRecord<K, V>>> pollConcurrentlyWithPollCount(
+          List<Consumer<K, V>> consumers, int pollCount, int pollMs) {
+    var result = new HashMap<TopicPartition, List<ConsumerRecord<K, V>>>();
+    Common.runConcurrently(
+            consumers.stream()
+                    .map(
+                            c ->
+                                    (Supplier<Void>)
+                                            () -> {
+                                              var crs = new ArrayList<ConsumerRecords<K, V>>();
+                                              for (int i = 0; i < pollCount; i++) {
+                                                var rs = c.poll(pollMs);
+                                                crs.add(rs);
+                                              }
+                                              var mrs = mergeConsumerRecords(crs);
+                                              synchronized (result) {
+                                                result.putAll(mrs);
+                                              }
+                                              return null;
+                                            })
+                    .collect(Collectors.toList()));
+    return result;
   }
 
   public static <K, V> Map<TopicPartition, List<ConsumerRecord<K, V>>> mergeConsumerRecords(

@@ -200,8 +200,6 @@ public class ProducerTest {
 
         var tp = new TopicPartition(topic, partition);
         consumer.assign(List.of(tp));
-        // TODO: ignore seek will cause the test fail, is this a feature or our server
-        // implementation have some bug?
         consumer.seekToBeginning(List.of(tp));
         var records = consumeRecords(consumer, 100, 30 * 1000);
         for (int i = 0; i < records.size(); i++) {
