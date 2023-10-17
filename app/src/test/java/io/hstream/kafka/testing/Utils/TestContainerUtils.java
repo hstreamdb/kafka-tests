@@ -107,16 +107,8 @@ public class TestContainerUtils {
       throws IOException, InterruptedException {
     List<GenericContainer<?>> hservers = new ArrayList<>();
     var seedNodes = String.join(",", hserverInnerUrls);
+    logger.info("seedNodes: {}", seedNodes);
     for (HServerCliOpts hserverConf : hserverConfs) {
-      logger.info(hserverInnerUrls.toString());
-      hserverInnerUrls.remove("hserver" + hserverConf.serverId + ":" + hserverConf.gossipPort);
-      //      var seedNodes = String.join(",", hserverInnerUrls)
-      //              + ",$(hostname -I | awk '{print $1}'):"
-      //              + hserverConf.internalPort;
-      //      hserverInnerUrls.add("hserver" + hserverConf.serverId + ":" +
-      // hserverConf.internalPort);
-      //
-      //      logger.info("seedNodes: {}", seedNodes);
       var hserver = makeHServer(hserverConf, seedNodes, dataDir);
       hservers.add(hserver);
     }
