@@ -86,7 +86,10 @@ public class Common {
     pollRecordsUntilTrue(
         consumer,
         rs -> {
-          records.addAll(rs.records(rs.partitions().iterator().next()));
+          for (ConsumerRecord<K, V> record : rs) {
+            records.add(record);
+          }
+          log.info("poll until {} records, now received {} records", numRecords, records.size());
           return records.size() >= numRecords;
         },
         () ->
@@ -171,7 +174,7 @@ public class Common {
 
   @SneakyThrows
   public static <T> ArrayList<T> runConcurrently(List<Supplier<T>> runners) {
-    var ts = new LinkedList<Thread>();
+    var ts = new ArrayList<Thread>();
     var result = new ArrayList<T>(Collections.nCopies(runners.size(), null));
     AtomicBoolean success = new AtomicBoolean(true);
     for (var i = 0; i < runners.size(); i++) {
@@ -208,7 +211,7 @@ public class Common {
                 c ->
                     (Supplier<Map<TopicPartition, List<ConsumerRecord<K, V>>>>)
                         () -> {
-                          var crs = new LinkedList<ConsumerRecords<K, V>>();
+                          var crs = new ArrayList<ConsumerRecords<K, V>>();
                           for (int i = 0; i < pollCount; i++) {
                             crs.add(c.poll(timeoutMs));
                           }
@@ -237,7 +240,7 @@ public class Common {
     for (var rs : consumerRecordsList) {
       for (var tp : rs.partitions()) {
         if (!result.containsKey(tp)) {
-          result.put(tp, new LinkedList<>());
+          result.put(tp, new ArrayList<>());
         }
         result.get(tp).addAll(rs.records(tp));
       }

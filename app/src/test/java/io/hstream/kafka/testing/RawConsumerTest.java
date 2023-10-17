@@ -3,7 +3,7 @@ package io.hstream.kafka.testing;
 import static io.hstream.kafka.testing.Utils.Common.*;
 
 import io.hstream.kafka.testing.Utils.RawConsumerBuilder;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -53,7 +53,7 @@ public class RawConsumerTest {
       sendBytesRecords(producer, 10, new TopicPartition(topic, i));
     }
 
-    var consumers = new LinkedList<Consumer<byte[], byte[]>>();
+    var consumers = new ArrayList<Consumer<byte[], byte[]>>();
     for (int i = 0; i < partitions; i++) {
       var consumer = new RawConsumerBuilder<byte[], byte[]>(HStreamUrl).build();
       var tp = new TopicPartition(topic, i);

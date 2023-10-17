@@ -4,7 +4,7 @@ import static io.hstream.kafka.testing.Utils.Common.*;
 
 import io.hstream.kafka.testing.Utils.Common;
 import io.hstream.kafka.testing.Utils.ConsumerBuilder;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,7 +53,7 @@ public class ConsumerTest {
 
   @SneakyThrows
   List<Consumer<byte[], byte[]>> createConsumers(String topic, String group, int consumerCount) {
-    var consumers = new LinkedList<Consumer<byte[], byte[]>>();
+    var consumers = new ArrayList<Consumer<byte[], byte[]>>();
     AtomicBoolean success = new AtomicBoolean(true);
     for (int i = 0; i < consumerCount; i++) {
       var consumer = new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).build();
