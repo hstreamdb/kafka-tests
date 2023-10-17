@@ -247,27 +247,28 @@ public class Common {
   /**
    * @param pollMs: consumer.poll(pollMs), not total timeout
    */
-  public static <K, V> Map<TopicPartition, List<ConsumerRecord<K, V>>> pollConcurrentlyWithPollCount(
+  public static <K, V>
+      Map<TopicPartition, List<ConsumerRecord<K, V>>> pollConcurrentlyWithPollCount(
           List<Consumer<K, V>> consumers, int pollCount, int pollMs) {
     var result = new HashMap<TopicPartition, List<ConsumerRecord<K, V>>>();
     Common.runConcurrently(
-            consumers.stream()
-                    .map(
-                            c ->
-                                    (Supplier<Void>)
-                                            () -> {
-                                              var crs = new ArrayList<ConsumerRecords<K, V>>();
-                                              for (int i = 0; i < pollCount; i++) {
-                                                var rs = c.poll(pollMs);
-                                                crs.add(rs);
-                                              }
-                                              var mrs = mergeConsumerRecords(crs);
-                                              synchronized (result) {
-                                                result.putAll(mrs);
-                                              }
-                                              return null;
-                                            })
-                    .collect(Collectors.toList()));
+        consumers.stream()
+            .map(
+                c ->
+                    (Supplier<Void>)
+                        () -> {
+                          var crs = new ArrayList<ConsumerRecords<K, V>>();
+                          for (int i = 0; i < pollCount; i++) {
+                            var rs = c.poll(pollMs);
+                            crs.add(rs);
+                          }
+                          var mrs = mergeConsumerRecords(crs);
+                          synchronized (result) {
+                            result.putAll(mrs);
+                          }
+                          return null;
+                        })
+            .collect(Collectors.toList()));
     return result;
   }
 

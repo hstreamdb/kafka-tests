@@ -8,15 +8,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -249,7 +245,7 @@ public class ConsumerTest {
     sendBytesRecords(producer, 10, tp);
 
     var consumer1 =
-            new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
     consumer1.assign(List.of(tp));
     consumeRecords(consumer1, 10, 10000);
 
@@ -266,7 +262,7 @@ public class ConsumerTest {
     log.info("wrote another 10 records");
 
     var consumer2 =
-            new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
     consumer2.subscribe(List.of(topic));
     consumeRecords(consumer2, 10, 10000);
     consumer2.commitSync();
@@ -285,7 +281,7 @@ public class ConsumerTest {
     sendBytesRecords(producer, 10, tp);
 
     var consumer1 =
-            new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
     consumer1.assign(List.of(tp));
     consumer1.seekToBeginning(List.of(tp));
     consumeRecords(consumer1, 10, 10000);
@@ -303,7 +299,7 @@ public class ConsumerTest {
     log.info("wrote another 10 records");
 
     var consumer2 =
-            new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
     consumer2.subscribe(List.of(topic));
     consumeRecords(consumer2, 10, 10000);
     consumer2.commitSync();
