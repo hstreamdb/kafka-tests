@@ -117,7 +117,7 @@ public class ConsumerTest {
     newConsumer.subscribe(List.of(topic));
     consumers.add(newConsumer);
 
-    pollConcurrently(consumers, 2000, 5);
+    pollConcurrentlyWithPollCount(consumers, 1, 8000);
     log.info("rebalanced assignment:");
     Common.assertAssignment(consumers, 3);
     Common.assertBalancedAssignment(consumers, 3);
