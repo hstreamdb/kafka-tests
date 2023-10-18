@@ -55,7 +55,7 @@ jobs:
           - io.hstream.kafka.testing.ProducerTest
           - io.hstream.kafka.testing.TopicTest
         kafka_client_version:
-          - 0.11.00
+          - 0.11.0.0
           - 3.5.1
 
     steps:
