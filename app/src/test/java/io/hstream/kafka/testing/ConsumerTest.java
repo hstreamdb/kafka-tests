@@ -150,7 +150,7 @@ public class ConsumerTest {
     }
 
     var consumers = createConsumers(topic, "group01", 1);
-    var result = pollConcurrently(consumers, 10);
+    var result = pollConcurrently(consumers, partitions * 10);
     Common.assertAssignment(consumers, 3);
     for (int i = 0; i < partitions; i++) {
       var tp = new TopicPartition(topic, i);
