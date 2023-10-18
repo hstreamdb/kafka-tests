@@ -61,7 +61,7 @@ public class RawConsumerTest {
       consumer.seek(tp, 0);
       consumers.add(consumer);
     }
-    var result = pollConcurrently(consumers, 10);
+    var result = pollConcurrently(consumers, partitions * 10);
     for (int i = 0; i < partitions; i++) {
       Assertions.assertTrue(result.containsKey(new TopicPartition(topic, i)));
       Assertions.assertEquals(10, result.get(new TopicPartition(topic, i)).size());
