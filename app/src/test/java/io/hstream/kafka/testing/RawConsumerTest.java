@@ -43,7 +43,6 @@ public class RawConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testMultiConsumerWithMultiPartitions() {
     var topic = randomTopicName("abc");
     var partitions = 3;

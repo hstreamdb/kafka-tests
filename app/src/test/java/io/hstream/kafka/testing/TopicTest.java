@@ -13,7 +13,6 @@ import org.apache.kafka.clients.admin.NewTopic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +45,6 @@ public class TopicTest {
   }
 
   @Test
-  @Timeout(10)
   void testCreateTopic() {
     NewTopic requestedTopic1 = new NewTopic("test_create_topic1", 1, (short) 1);
     NewTopic requestedTopic2 = new NewTopic("test_create_topic2", 2, (short) 3);

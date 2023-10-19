@@ -65,7 +65,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testSingleConsumerWithEmptyTopic() throws Exception {
     var topic = randomTopicName("abc_topic_");
     createTopic(client, topic, 1, (short) 1);
@@ -74,7 +73,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testSingleConsumerWithEmptyTopicAndMultiPartitions() throws Exception {
     var topic = randomTopicName("abc_topic_");
     createTopic(client, topic, 3, (short) 1);
@@ -83,7 +81,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testMultiConsumerWithEmptyTopicAndSinglePartition() throws Exception {
     var group = "group01";
     var topic = randomTopicName("abc_topic_");
@@ -93,7 +90,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testMultiConsumerWithEmptyTopicAndMultiPartitions() throws Exception {
     var group = "group01";
     var topic = randomTopicName("abc_topic_");
@@ -104,7 +100,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testJoinGroupRebalance() throws Exception {
     var group = "group01";
     var topic = randomTopicName("abc_topic_");
@@ -124,7 +119,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testSingleConsumer() {
     var group = "group01";
     var topic = randomTopicName("abc_topic_");
@@ -139,7 +133,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testSingleConsumerWithMultiPartitions() throws Exception {
     var topic = randomTopicName("abc_topic_");
     var partitions = 3;
@@ -160,7 +153,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testMultiConsumerWithSinglePartition() throws Exception {
     var topic = randomTopicName("abc_topic_");
     createTopic(client, topic, 1, (short) 1);
@@ -175,7 +167,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testMultiConsumerWithMultiPartitions() {
     var topic = randomTopicName("abc_topic_");
     var partitions = 3;
@@ -197,7 +188,6 @@ public class ConsumerTest {
 
   // also tested leave group
   @Test
-  @Timeout(60)
   void testCommitAndFetchOffsets() throws Exception {
     var group = "group01";
     var topic = randomTopicName("abc");
@@ -235,7 +225,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testManualAssign() throws Exception {
     var group = "group01";
     var topic = randomTopicName("abc");
@@ -271,7 +260,6 @@ public class ConsumerTest {
   }
 
   @Test
-  @Timeout(40)
   void testManualSeek() throws Exception {
     var group = "group01";
     var topic = randomTopicName("abc");

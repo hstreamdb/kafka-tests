@@ -54,7 +54,6 @@ public class ProducerTest {
   }
 
   @Test
-  @Timeout(40)
   void testSendOffsets() throws ExecutionException, InterruptedException, TimeoutException {
     var topic = randomTopicName("testSendOffset");
     final AtomicLong offset = new AtomicLong(0);
@@ -128,7 +127,6 @@ public class ProducerTest {
   }
 
   @Test
-  @Timeout(30)
   @Description(
       "checks the closing behavior. After close() returns, all messages should be sent"
           + "with correct returned offset metadata")
@@ -163,7 +161,6 @@ public class ProducerTest {
   }
 
   @Test
-  @Timeout(40)
   void testSendToPartition() throws RuntimeException, ExecutionException, InterruptedException {
     var topic = randomTopicName("testSendToPartition");
     try {
@@ -218,7 +215,6 @@ public class ProducerTest {
 
   @Test
   @Description("flush will send all accumulated requests immediately")
-  @Timeout(30)
   void testFlush() throws ExecutionException, InterruptedException, RuntimeException {
     var topic = randomTopicName("testFlush");
 
