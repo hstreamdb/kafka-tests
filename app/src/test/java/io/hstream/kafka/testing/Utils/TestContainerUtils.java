@@ -97,6 +97,7 @@ public class TestContainerUtils {
           + " --log-level "
           + "debug"
           + " --log-with-color"
+          + " --log-flush-immediately"
           + " --store-log-level "
           + "error";
     }

@@ -85,7 +85,7 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
 
   @Override
   public void afterEach(ExtensionContext context) throws Exception {
-    Thread.sleep(2000);
+    Thread.sleep(500);
 
     // waiting for servers to flush logs
     for (int i = 0; i < hservers.size(); i++) {

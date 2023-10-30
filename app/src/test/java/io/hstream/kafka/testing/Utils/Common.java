@@ -65,6 +65,26 @@ public class Common {
   }
 
   // ============================ Consumer =======================================
+  public static List<Consumer<byte[], byte[]>> createConsumersAndPoll(
+      String url, String topic, String group, int consumerCount) {
+    var consumers = createConsumers(url, topic, group, consumerCount);
+    pollConcurrentlyWithPollCount(consumers, 1, 8000);
+    return consumers;
+  }
+
+  @SneakyThrows
+  public static List<Consumer<byte[], byte[]>> createConsumers(
+      String url, String topic, String group, int consumerCount) {
+    var consumers = new ArrayList<Consumer<byte[], byte[]>>();
+    AtomicBoolean success = new AtomicBoolean(true);
+    for (int i = 0; i < consumerCount; i++) {
+      var consumer = new ConsumerBuilder<byte[], byte[]>(url).groupId(group).build();
+      consumers.add(consumer);
+      consumer.subscribe(List.of(topic));
+    }
+    Assertions.assertTrue(success.get());
+    return consumers;
+  }
 
   public static Consumer<byte[], byte[]> createBytesConsumer(String serverUrl) {
     return new ConsumerBuilder<byte[], byte[]>(serverUrl)
