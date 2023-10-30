@@ -1,6 +1,10 @@
 package io.hstream.kafka.testing.version_3_5;
 
+import static io.hstream.kafka.testing.Utils.Common.*;
+
 import io.hstream.kafka.testing.ClusterExtension;
+import java.util.Map;
+import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -11,11 +15,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.util.Map;
-import java.util.Properties;
-
-import static io.hstream.kafka.testing.Utils.Common.*;
 
 @Slf4j
 @ExtendWith(ClusterExtension.class)
