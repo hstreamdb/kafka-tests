@@ -25,6 +25,12 @@ configurations.all {
     resolutionStrategy.cacheDynamicVersionsFor 0, 'minutes'
 }
 
+def DEFAULT_CLIENT_VERSION = "3.5.1"
+def KAFKA_CLIENT_VERSION = DEFAULT_CLIENT_VERSION
+if (System.getenv("KAFKA_CLIENT_VERSION") != null) {
+    KAFKA_CLIENT_VERSION = System.getenv("KAFKA_CLIENT_VERSION")
+}
+
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
@@ -32,11 +38,6 @@ dependencies {
     testImplementation "org.testcontainers:testcontainers:1.19.0"
     testImplementation "org.testcontainers:junit-jupiter:1.19.0"
     testImplementation "org.testcontainers:toxiproxy:1.19.0"
-
-    def KAFKA_CLIENT_VERSION = "0.11.0.0"
-    if (System.getenv("KAFKA_CLIENT_VERSION") != null) {
-        KAFKA_CLIENT_VERSION = System.getenv("KAFKA_CLIENT_VERSION")
-    }
 
     System.out.println("KAFKA_CLIENT_VERSION:" + KAFKA_CLIENT_VERSION)
     testImplementation "org.apache.kafka:kafka-clients:${KAFKA_CLIENT_VERSION}"
@@ -75,5 +76,15 @@ spotless {
         target '*.gradle'
         greclipse()
         indentWithSpaces()
+    }
+}
+
+sourceSets {
+    test {
+        java {
+            if (KAFKA_CLIENT_VERSION != DEFAULT_CLIENT_VERSION) {
+                exclude 'io/hstream/kafka/testing/version_3_5/**'
+            }
+        }
     }
 }
