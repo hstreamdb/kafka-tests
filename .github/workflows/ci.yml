@@ -78,7 +78,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
-          name: ${{ matrix.name }}-logs-artifact
+          name: ${{ matrix.test_class }}-${{ matrix.kafka_client_version }}-logs-artifact
           path: |
             .logs
             app/build/reports
