@@ -10,19 +10,18 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
+@Slf4j
 public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
 
   static final int CLUSTER_SIZE = 1;
   private static final AtomicInteger count = new AtomicInteger(0);
-  private static final Logger logger = LoggerFactory.getLogger(ClusterExtension.class);
   private final List<GenericContainer<?>> hservers = new ArrayList<>(CLUSTER_SIZE);
   private final List<String> hserverUrls = new ArrayList<>(CLUSTER_SIZE);
   private final List<String> hserverInnerUrls = new ArrayList<>(CLUSTER_SIZE);
@@ -50,7 +49,7 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
     hstore = makeHStore(dataDir);
     hstore.start();
     String hstoreHost = hstore.getHost();
-    logger.info("hstoreHost: " + hstoreHost);
+    log.info("hstoreHost: " + hstoreHost);
 
     List<TestContainerUtils.HServerCliOpts> hserverConfs = new ArrayList<>(CLUSTER_SIZE);
     for (int i = 0; i < CLUSTER_SIZE; ++i) {
@@ -67,10 +66,11 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
       hserverInnerUrls.add("hserver" + offset + ":" + hserverGossipPort);
     }
 
-    logger.info("hserverInnerUrls: {}", hserverInnerUrls);
+    log.info("hserverInnerUrls: {}", hserverInnerUrls);
     hservers.addAll(bootstrapHServerCluster(hserverConfs, hserverInnerUrls, dataDir));
     hservers.forEach(h -> h.waitingFor(Wait.forLogMessage(".*Cluster is ready!.*", 1)));
-    hservers.forEach(h -> logger.info(h.getLogs()));
+    log.info("SERVER Setup Logs:");
+    hservers.forEach(h -> log.info(h.getLogs()));
     var serverHosts =
         hservers.stream()
             .map(h -> h.getHost() + ":" + h.getFirstMappedPort())
@@ -104,7 +104,7 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
     zk.close();
     rq.close();
 
-    logger.info("total time is = {}ms", System.currentTimeMillis() - beginTime);
+    log.info("total time is = {}ms", System.currentTimeMillis() - beginTime);
     printEndFlag(context);
   }
 }
