@@ -2,12 +2,10 @@ package io.hstream.kafka.testing;
 
 import static io.hstream.kafka.testing.Utils.Common.*;
 
-import io.hstream.kafka.testing.Utils.ConsumerBuilder;
 import io.hstream.kafka.testing.Utils.RawConsumerBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -16,8 +14,6 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Slf4j
 @ExtendWith(ClusterExtension.class)
@@ -82,8 +78,7 @@ public class RawConsumerTest {
     var tp = new TopicPartition(topic, 0);
     sendBytesRecords(producer, 10, tp);
 
-    var consumer1 =
-            new RawConsumerBuilder<byte[], byte[]>(HStreamUrl).build();
+    var consumer1 = new RawConsumerBuilder<byte[], byte[]>(HStreamUrl).build();
     consumer1.assign(List.of(tp));
     consumer1.seekToBeginning(List.of(tp));
     consumeRecords(consumer1, 10, 10000);
@@ -97,8 +92,7 @@ public class RawConsumerTest {
     log.info("wrote another 10 records");
     producer.close();
 
-    var consumer2 =
-            new RawConsumerBuilder<byte[], byte[]>(HStreamUrl).build();
+    var consumer2 = new RawConsumerBuilder<byte[], byte[]>(HStreamUrl).build();
     consumer2.assign(List.of(tp));
     consumer2.seek(tp, 10);
     consumeRecords(consumer2, 10, 10000);

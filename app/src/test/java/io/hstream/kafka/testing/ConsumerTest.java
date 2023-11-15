@@ -249,7 +249,7 @@ public class ConsumerTest {
     sendBytesRecords(producer, 10, tp);
 
     var consumer1 =
-            new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
     consumer1.assign(List.of(tp));
     consumeRecords(consumer1, 10, 10000);
     consumer1.close();
@@ -303,7 +303,7 @@ public class ConsumerTest {
     sendBytesRecords(producer, 10, tp);
 
     var consumer1 =
-            new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
     consumer1.assign(List.of(tp));
     consumer1.seek(tp, 5);
     consumeRecords(consumer1, 5, 10000);
