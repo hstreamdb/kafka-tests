@@ -348,7 +348,7 @@ public class ConsumerTest {
   }
 
   // mix self-assignment and group-assignment consumers
-  @Disabled
+  //  @Disabled
   @Test
   void testManualSeek() throws Exception {
     var group = "group01";
