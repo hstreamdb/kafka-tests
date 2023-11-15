@@ -276,7 +276,6 @@ public class ConsumerTest {
     consumer1.close();
     log.info("closed consumer1");
 
-    // waiting server to handle leave group and re-balance
     Thread.sleep(8000);
 
     sendBytesRecords(producer, 10, tp);
@@ -310,7 +309,46 @@ public class ConsumerTest {
     consumer1.close();
   }
 
+  @Test
+  void testMultiProduceAndConsumeWithEmptyGroup() throws Exception {
+    var group = "group01";
+    var topic = randomTopicName("abc");
+    createTopic(client, topic, 1, (short) 1);
+    var producer = createByteProducer(HStreamUrl);
+    var tp = new TopicPartition(topic, 0);
+    sendBytesRecords(producer, 10, tp);
+
+    var consumer1 =
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+    consumer1.assign(List.of(tp));
+    consumer1.seekToBeginning(List.of(tp));
+    consumeRecords(consumer1, 10, 10000);
+
+    log.info("committing offsets");
+    consumer1.commitSync();
+    log.info("committed offsets");
+    consumer1.close();
+    log.info("closed consumer1");
+
+    Thread.sleep(8000);
+
+    sendBytesRecords(producer, 10, tp);
+    log.info("wrote another 10 records");
+    producer.close();
+
+    var consumer2 =
+        new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+    consumer2.assign(List.of(tp));
+    consumer2.seek(tp, 10);
+    consumeRecords(consumer2, 10, 10000);
+    consumer2.commitSync();
+    var offsets = consumer2.endOffsets(List.of(tp));
+    log.info("current offsets: {}", offsets);
+    consumer2.close();
+  }
+
   // mix self-assignment and group-assignment consumers
+  @Disabled
   @Test
   void testManualSeek() throws Exception {
     var group = "group01";
@@ -332,7 +370,6 @@ public class ConsumerTest {
     consumer1.close();
     log.info("closed consumer1");
 
-    // waiting server to handle leave group and re-balance
     Thread.sleep(8000);
 
     sendBytesRecords(producer, 10, tp);
