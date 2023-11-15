@@ -70,6 +70,7 @@ public class ConsumerTest {
     createTopic(client, topic, 1, (short) 1);
     var consumers = createConsumersAndPoll(topic, "group01", 1);
     Common.assertAssignment(consumers, 1);
+    consumers.forEach(Consumer::close);
   }
 
   @Test
@@ -78,6 +79,7 @@ public class ConsumerTest {
     createTopic(client, topic, 3, (short) 1);
     var consumers = createConsumersAndPoll(topic, "group01", 1);
     Common.assertAssignment(consumers, 3);
+    consumers.forEach(Consumer::close);
   }
 
   @Test
@@ -87,6 +89,7 @@ public class ConsumerTest {
     createTopic(client, topic, 1, (short) 1);
     var consumers = createConsumersAndPoll(topic, group, 3);
     Common.assertAssignment(consumers, 1);
+    consumers.forEach(Consumer::close);
   }
 
   @Test
@@ -97,6 +100,7 @@ public class ConsumerTest {
     var consumers = createConsumersAndPoll(topic, group, 3);
     Common.assertAssignment(consumers, 3);
     Common.assertBalancedAssignment(consumers, 3);
+    consumers.forEach(Consumer::close);
   }
 
   @Test
@@ -116,6 +120,7 @@ public class ConsumerTest {
     log.info("rebalanced assignment:");
     Common.assertAssignment(consumers, 3);
     Common.assertBalancedAssignment(consumers, 3);
+    consumers.forEach(Consumer::close);
   }
 
   @Test
@@ -125,11 +130,13 @@ public class ConsumerTest {
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     sendBytesRecords(producer, 10, new TopicPartition(topic, 0));
+    producer.close();
 
     var consumer = createConsumers(topic, group, 1).get(0);
     consumer.subscribe(List.of(topic));
     var records = consumeRecords(consumer, 10, 10000);
     Assertions.assertEquals(10, records.size());
+    consumer.close();
   }
 
   @Test
@@ -137,9 +144,10 @@ public class ConsumerTest {
     var topic = randomTopicName("abc_topic_");
     var partitions = 3;
     createTopic(client, topic, partitions, (short) 1);
-    var producer = createByteProducer(HStreamUrl);
-    for (int i = 0; i < partitions; i++) {
-      sendBytesRecords(producer, 10, new TopicPartition(topic, i));
+    try (var producer = createByteProducer(HStreamUrl)) {
+      for (int i = 0; i < partitions; i++) {
+        sendBytesRecords(producer, 10, new TopicPartition(topic, i));
+      }
     }
 
     var consumers = createConsumers(topic, "group01", 1);
@@ -150,6 +158,7 @@ public class ConsumerTest {
       Assertions.assertNotNull(result.get(tp));
       Assertions.assertEquals(10, result.get(tp).size());
     }
+    consumers.forEach(Consumer::close);
   }
 
   @Test
@@ -158,12 +167,14 @@ public class ConsumerTest {
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     sendBytesRecords(producer, 10, new TopicPartition(topic, 0));
+    producer.close();
 
     var consumers = createConsumers(topic, "group01", 3);
     var result = pollConcurrently(consumers, 10);
     Common.assertAssignment(consumers, 1);
     Assertions.assertEquals(10, result.get(new TopicPartition(topic, 0)).size());
     // TODO: check result data
+    consumers.forEach(Consumer::close);
   }
 
   @Test
@@ -175,6 +186,7 @@ public class ConsumerTest {
     for (int i = 0; i < partitions; i++) {
       sendBytesRecords(producer, 10, new TopicPartition(topic, i));
     }
+    producer.close();
 
     var consumers = createConsumers(topic, "group01", 3);
     var result = pollConcurrently(consumers, 30);
@@ -184,6 +196,7 @@ public class ConsumerTest {
       Assertions.assertEquals(10, result.get(new TopicPartition(topic, i)).size());
       // TODO: check result data
     }
+    consumers.forEach(Consumer::close);
   }
 
   // also tested leave group
@@ -195,6 +208,7 @@ public class ConsumerTest {
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);
     sendBytesRecords(producer, 10, tp);
+    producer.close();
 
     var consumer1 =
         new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
@@ -222,6 +236,7 @@ public class ConsumerTest {
     consumer2.commitSync();
     var offsets = consumer2.endOffsets(List.of(tp));
     log.info("current offsets: {}", offsets);
+    consumer2.close();
   }
 
   @Test
@@ -232,6 +247,7 @@ public class ConsumerTest {
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);
     sendBytesRecords(producer, 10, tp);
+    producer.close();
 
     var consumer1 =
         new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
@@ -257,12 +273,11 @@ public class ConsumerTest {
     consumer2.commitSync();
     var offsets = consumer2.endOffsets(List.of(tp));
     log.info("current offsets: {}", offsets);
+    consumer2.close();
   }
 
   @Test
   void testManualSeek() throws Exception {
-    Thread.sleep(3000);
-
     var group = "group01";
     var topic = randomTopicName("abc");
     createTopic(client, topic, 1, (short) 1);
@@ -295,5 +310,6 @@ public class ConsumerTest {
     consumer2.commitSync();
     var offsets = consumer2.endOffsets(List.of(tp));
     log.info("current offsets: {}", offsets);
+    consumer2.close();
   }
 }

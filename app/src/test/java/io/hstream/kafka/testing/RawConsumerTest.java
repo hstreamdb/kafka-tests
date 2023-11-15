@@ -66,5 +66,6 @@ public class RawConsumerTest {
       Assertions.assertEquals(10, result.get(new TopicPartition(topic, i)).size());
       // TODO: check result data
     }
+    consumers.forEach(Consumer::close);
   }
 }
