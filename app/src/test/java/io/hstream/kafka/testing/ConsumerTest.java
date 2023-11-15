@@ -240,6 +240,23 @@ public class ConsumerTest {
   }
 
   @Test
+  void testSimpleManualAssign() throws Exception {
+    var group = "group01";
+    var topic = randomTopicName("abc");
+    createTopic(client, topic, 3, (short) 1);
+    var producer = createByteProducer(HStreamUrl);
+    var tp = new TopicPartition(topic, 1);
+    sendBytesRecords(producer, 10, tp);
+
+    var consumer1 =
+            new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+    consumer1.assign(List.of(tp));
+    consumeRecords(consumer1, 10, 10000);
+    consumer1.close();
+  }
+
+  // mix self-assignment and group-assignment consumers
+  @Test
   void testManualAssign() throws Exception {
     var group = "group01";
     var topic = randomTopicName("abc");
@@ -276,6 +293,24 @@ public class ConsumerTest {
     consumer2.close();
   }
 
+  @Test
+  void testSimpleManualSeek() throws Exception {
+    var group = "group01";
+    var topic = randomTopicName("abc");
+    createTopic(client, topic, 1, (short) 1);
+    var producer = createByteProducer(HStreamUrl);
+    var tp = new TopicPartition(topic, 0);
+    sendBytesRecords(producer, 10, tp);
+
+    var consumer1 =
+            new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
+    consumer1.assign(List.of(tp));
+    consumer1.seek(tp, 5);
+    consumeRecords(consumer1, 5, 10000);
+    consumer1.close();
+  }
+
+  // mix self-assignment and group-assignment consumers
   @Test
   void testManualSeek() throws Exception {
     var group = "group01";

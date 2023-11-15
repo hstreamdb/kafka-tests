@@ -2,10 +2,14 @@ package io.hstream.kafka.testing;
 
 import static io.hstream.kafka.testing.Utils.Common.*;
 
+import io.hstream.kafka.testing.Utils.ConsumerBuilder;
 import io.hstream.kafka.testing.Utils.RawConsumerBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -15,9 +19,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Slf4j
 @ExtendWith(ClusterExtension.class)
 public class RawConsumerTest {
-  private static final Logger logger = LoggerFactory.getLogger(RawConsumerTest.class);
   private String HStreamUrl = "127.0.0.1:9092";
   private AdminClient client;
 
@@ -32,7 +36,7 @@ public class RawConsumerTest {
     try {
       client = AdminClient.create(adminProps);
     } catch (Exception e) {
-      logger.error("create admin client failed: {}", e.toString());
+      log.error("create admin client failed: {}", e.toString());
       throw e;
     }
   }
@@ -67,5 +71,37 @@ public class RawConsumerTest {
       // TODO: check result data
     }
     consumers.forEach(Consumer::close);
+  }
+
+  @SneakyThrows
+  @Test
+  void testMultiProduceAndFetch() {
+    var topic = randomTopicName("abc");
+    createTopic(client, topic, 1, (short) 1);
+    var producer = createByteProducer(HStreamUrl);
+    var tp = new TopicPartition(topic, 0);
+    sendBytesRecords(producer, 10, tp);
+
+    var consumer1 =
+            new RawConsumerBuilder<byte[], byte[]>(HStreamUrl).build();
+    consumer1.assign(List.of(tp));
+    consumer1.seekToBeginning(List.of(tp));
+    consumeRecords(consumer1, 10, 10000);
+    consumer1.close();
+    log.info("finished the first round(produce and write)");
+
+    // waiting before next-round write and read
+    Thread.sleep(8000);
+
+    sendBytesRecords(producer, 10, tp);
+    log.info("wrote another 10 records");
+    producer.close();
+
+    var consumer2 =
+            new RawConsumerBuilder<byte[], byte[]>(HStreamUrl).build();
+    consumer2.assign(List.of(tp));
+    consumer2.seek(tp, 10);
+    consumeRecords(consumer2, 10, 10000);
+    consumer2.close();
   }
 }
