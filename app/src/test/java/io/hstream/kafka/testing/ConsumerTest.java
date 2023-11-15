@@ -208,7 +208,6 @@ public class ConsumerTest {
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);
     sendBytesRecords(producer, 10, tp);
-    producer.close();
 
     var consumer1 =
         new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
@@ -227,6 +226,7 @@ public class ConsumerTest {
 
     sendBytesRecords(producer, 10, tp);
     log.info("wrote another 10 records");
+    producer.close();
 
     var consumer2 =
         new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
@@ -247,7 +247,6 @@ public class ConsumerTest {
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);
     sendBytesRecords(producer, 10, tp);
-    producer.close();
 
     var consumer1 =
         new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
@@ -265,6 +264,7 @@ public class ConsumerTest {
 
     sendBytesRecords(producer, 10, tp);
     log.info("wrote another 10 records");
+    producer.close();
 
     var consumer2 =
         new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
@@ -302,6 +302,7 @@ public class ConsumerTest {
 
     sendBytesRecords(producer, 10, tp);
     log.info("wrote another 10 records");
+    producer.close();
 
     var consumer2 =
         new ConsumerBuilder<byte[], byte[]>(HStreamUrl).groupId(group).autoCommit(false).build();
