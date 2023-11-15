@@ -261,6 +261,8 @@ public class ConsumerTest {
 
   @Test
   void testManualSeek() throws Exception {
+    Thread.sleep(3000);
+
     var group = "group01";
     var topic = randomTopicName("abc");
     createTopic(client, topic, 1, (short) 1);

@@ -73,7 +73,7 @@ jobs:
         run: |
           export TEST_NAME=${{ matrix.test_class }}
           export KAFKA_CLIENT_VERSION=${{ matrix.kafka_client_version }}
-          ./gradlew test -i --tests "${TEST_NAME}"
+          ./gradlew test --fail-fast -i --tests "${TEST_NAME}"
 
       - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
