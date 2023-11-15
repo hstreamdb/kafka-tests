@@ -68,7 +68,7 @@ public class TestContainerUtils {
         .withCommand(
             "bash", "-c", " hstream-kafka-server" + hserverConf + " --seed-nodes " + seedNodes)
         // .withLogConsumer(msg -> logger.info(msg.getUtf8String()))
-        .waitingFor(Wait.forLogMessage(".*Server is started on port.*", 1));
+        .waitingFor(Wait.forLogMessage(".*Cluster is ready!.*", 1));
   }
 
   public static class HServerCliOpts {
