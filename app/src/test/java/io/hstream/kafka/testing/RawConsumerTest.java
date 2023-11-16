@@ -44,7 +44,7 @@ public class RawConsumerTest {
 
   @Test
   void testMultiConsumerWithMultiPartitions() {
-    var topic = randomTopicName("abc");
+    var topic = randomTopicName();
     var partitions = 3;
     createTopic(client, topic, partitions, (short) 1);
     var producer = createByteProducer(HStreamUrl);
@@ -72,7 +72,7 @@ public class RawConsumerTest {
   @SneakyThrows
   @Test
   void testMultiProduceAndFetch() {
-    var topic = randomTopicName("abc");
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);

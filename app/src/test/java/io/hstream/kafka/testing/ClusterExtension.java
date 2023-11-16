@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -30,9 +32,28 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
   private GenericContainer<?> hstore;
   private String grp;
   private long beginTime;
+  String HSTREAM_SERVICE_URL = "HSTREAM_SERVICE_URL";
+  boolean external_hserver_mode = false;
+
+  @SneakyThrows
+  void updateTestServiceUrl(ExtensionContext context, String url) {
+    Object testInstance = context.getRequiredTestInstance();
+    testInstance
+            .getClass()
+            .getMethod("setHStreamUrl", String.class)
+            .invoke(testInstance, url);
+  }
 
   @Override
   public void beforeEach(ExtensionContext context) throws Exception {
+    if (System.getenv(HSTREAM_SERVICE_URL) != null) {
+      external_hserver_mode = true;
+      var url = System.getenv(HSTREAM_SERVICE_URL);
+      log.info("found HSTREAM_SERVICE_URL={} env, use external hservers", url);
+      updateTestServiceUrl(context, url);
+      return;
+    }
+
     beginTime = System.currentTimeMillis();
 
     grp = UUID.randomUUID().toString();
@@ -76,15 +97,15 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
             .map(h -> h.getHost() + ":" + h.getFirstMappedPort())
             .collect(Collectors.joining(","));
 
-    Object testInstance = context.getRequiredTestInstance();
-    testInstance
-        .getClass()
-        .getMethod("setHStreamUrl", String.class)
-        .invoke(testInstance, serverHosts);
+    updateTestServiceUrl(context, serverHosts);
   }
 
   @Override
   public void afterEach(ExtensionContext context) throws Exception {
+    if (external_hserver_mode) {
+      return;
+    }
+
     Thread.sleep(500);
 
     // waiting for servers to flush logs
