@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.AfterEachCallback;
@@ -38,10 +37,7 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
   @SneakyThrows
   void updateTestServiceUrl(ExtensionContext context, String url) {
     Object testInstance = context.getRequiredTestInstance();
-    testInstance
-            .getClass()
-            .getMethod("setHStreamUrl", String.class)
-            .invoke(testInstance, url);
+    testInstance.getClass().getMethod("setHStreamUrl", String.class).invoke(testInstance, url);
   }
 
   @Override
