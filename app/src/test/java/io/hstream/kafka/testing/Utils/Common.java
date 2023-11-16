@@ -168,6 +168,10 @@ public class Common {
     return "test_topic_" + UUID.randomUUID().toString().replace("-", "");
   }
 
+  public static String randomGroupName() {
+    return "test_group_" + UUID.randomUUID().toString().replace("-", "");
+  }
+
   public static String randomTopicName(String prefix) {
     return prefix + "_topic_" + UUID.randomUUID().toString().replace("-", "");
   }

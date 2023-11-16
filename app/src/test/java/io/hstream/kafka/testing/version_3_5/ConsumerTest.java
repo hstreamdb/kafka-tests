@@ -46,8 +46,8 @@ public class ConsumerTest {
 
   @Test
   void testListGroups() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc_topic_");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     sendBytesRecords(producer, 10, new TopicPartition(topic, 0));
@@ -65,8 +65,8 @@ public class ConsumerTest {
 
   @Test
   void testDescribeGroups() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc_topic_");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     sendBytesRecords(producer, 10, new TopicPartition(topic, 0));
@@ -85,8 +85,8 @@ public class ConsumerTest {
 
   @Test
   void testFetchOffsets() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc_topic_");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     sendBytesRecords(producer, 10, new TopicPartition(topic, 0));

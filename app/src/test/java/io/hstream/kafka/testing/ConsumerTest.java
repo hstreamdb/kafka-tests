@@ -66,26 +66,26 @@ public class ConsumerTest {
 
   @Test
   void testSingleConsumerWithEmptyTopic() throws Exception {
-    var topic = randomTopicName("abc_topic_");
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
-    var consumers = createConsumersAndPoll(topic, "group01", 1);
+    var consumers = createConsumersAndPoll(topic, randomGroupName(), 1);
     Common.assertAssignment(consumers, 1);
     consumers.forEach(Consumer::close);
   }
 
   @Test
   void testSingleConsumerWithEmptyTopicAndMultiPartitions() throws Exception {
-    var topic = randomTopicName("abc_topic_");
+    var topic = randomTopicName();
     createTopic(client, topic, 3, (short) 1);
-    var consumers = createConsumersAndPoll(topic, "group01", 1);
+    var consumers = createConsumersAndPoll(topic, randomGroupName(), 1);
     Common.assertAssignment(consumers, 3);
     consumers.forEach(Consumer::close);
   }
 
   @Test
   void testMultiConsumerWithEmptyTopicAndSinglePartition() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc_topic_");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var consumers = createConsumersAndPoll(topic, group, 3);
     Common.assertAssignment(consumers, 1);
@@ -94,8 +94,8 @@ public class ConsumerTest {
 
   @Test
   void testMultiConsumerWithEmptyTopicAndMultiPartitions() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc_topic_");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 3, (short) 1);
     var consumers = createConsumersAndPoll(topic, group, 3);
     Common.assertAssignment(consumers, 3);
@@ -105,8 +105,8 @@ public class ConsumerTest {
 
   @Test
   void testJoinGroupRebalance() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc_topic_");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 3, (short) 1);
     var consumers = createConsumersAndPoll(topic, group, 2);
     log.info("first phase assignment:");
@@ -125,8 +125,8 @@ public class ConsumerTest {
 
   @Test
   void testSingleConsumer() {
-    var group = "group01";
-    var topic = randomTopicName("abc_topic_");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     sendBytesRecords(producer, 10, new TopicPartition(topic, 0));
@@ -141,7 +141,7 @@ public class ConsumerTest {
 
   @Test
   void testSingleConsumerWithMultiPartitions() throws Exception {
-    var topic = randomTopicName("abc_topic_");
+    var topic = randomTopicName();
     var partitions = 3;
     createTopic(client, topic, partitions, (short) 1);
     try (var producer = createByteProducer(HStreamUrl)) {
@@ -150,7 +150,7 @@ public class ConsumerTest {
       }
     }
 
-    var consumers = createConsumers(topic, "group01", 1);
+    var consumers = createConsumers(topic, randomGroupName(), 1);
     var result = pollConcurrently(consumers, partitions * 10);
     Common.assertAssignment(consumers, 3);
     for (int i = 0; i < partitions; i++) {
@@ -163,13 +163,13 @@ public class ConsumerTest {
 
   @Test
   void testMultiConsumerWithSinglePartition() throws Exception {
-    var topic = randomTopicName("abc_topic_");
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     sendBytesRecords(producer, 10, new TopicPartition(topic, 0));
     producer.close();
 
-    var consumers = createConsumers(topic, "group01", 3);
+    var consumers = createConsumers(topic, randomGroupName(), 3);
     var result = pollConcurrently(consumers, 10);
     Common.assertAssignment(consumers, 1);
     Assertions.assertEquals(10, result.get(new TopicPartition(topic, 0)).size());
@@ -179,7 +179,7 @@ public class ConsumerTest {
 
   @Test
   void testMultiConsumerWithMultiPartitions() {
-    var topic = randomTopicName("abc_topic_");
+    var topic = randomTopicName();
     var partitions = 3;
     createTopic(client, topic, partitions, (short) 1);
     var producer = createByteProducer(HStreamUrl);
@@ -188,7 +188,7 @@ public class ConsumerTest {
     }
     producer.close();
 
-    var consumers = createConsumers(topic, "group01", 3);
+    var consumers = createConsumers(topic, randomGroupName(), 3);
     var result = pollConcurrently(consumers, 30);
     Common.assertAssignment(consumers, 3);
     Common.assertBalancedAssignment(consumers, 3);
@@ -202,8 +202,8 @@ public class ConsumerTest {
   // also tested leave group
   @Test
   void testCommitAndFetchOffsets() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);
@@ -241,8 +241,8 @@ public class ConsumerTest {
 
   @Test
   void testSimpleManualAssign() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 3, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 1);
@@ -258,8 +258,8 @@ public class ConsumerTest {
   // mix self-assignment and group-assignment consumers
   @Test
   void testManualAssign() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);
@@ -294,8 +294,8 @@ public class ConsumerTest {
 
   @Test
   void testSimpleManualSeek() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);
@@ -311,8 +311,8 @@ public class ConsumerTest {
 
   @Test
   void testMultiProduceAndConsumeWithEmptyGroup() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);
@@ -351,8 +351,8 @@ public class ConsumerTest {
   //  @Disabled
   @Test
   void testManualSeek() throws Exception {
-    var group = "group01";
-    var topic = randomTopicName("abc");
+    var group = randomGroupName();
+    var topic = randomTopicName();
     createTopic(client, topic, 1, (short) 1);
     var producer = createByteProducer(HStreamUrl);
     var tp = new TopicPartition(topic, 0);
