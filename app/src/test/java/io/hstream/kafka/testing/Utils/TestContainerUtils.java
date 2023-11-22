@@ -66,7 +66,7 @@ public class TestContainerUtils {
         .withFileSystemBind(
             dataDir.toAbsolutePath().toString(), "/kafka-data/hstore", BindMode.READ_ONLY)
         .withCommand(
-            "bash", "-c", " hstream-kafka-server" + hserverConf + " --seed-nodes " + seedNodes)
+            "bash", "-c", " hstream-server kafka" + hserverConf + " --seed-nodes " + seedNodes)
         // .withLogConsumer(msg -> logger.info(msg.getUtf8String()))
         .waitingFor(Wait.forLogMessage(".*Cluster is ready!.*", 1));
   }
