@@ -54,6 +54,7 @@ jobs:
           - io.hstream.kafka.testing.RawConsumerTest
           - io.hstream.kafka.testing.ProducerTest
           - io.hstream.kafka.testing.TopicTest
+          - io.hstream.kafka.testing.ConfigTest
         kafka_client_version:
           - 0.11.0.0
           - 3.5.1
