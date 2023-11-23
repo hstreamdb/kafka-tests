@@ -39,6 +39,15 @@ public class Common {
             () -> client.createTopics(List.of(requestedTopic)).all().get(5, TimeUnit.SECONDS));
   }
 
+  public static void createTopic(
+      AdminClient client, String name, int partitions, short replica, Map<String, String> cfg) {
+    NewTopic requestedTopic = new NewTopic(name, partitions, replica).configs(cfg);
+    assertThatNoException()
+        .as("create topics should success")
+        .isThrownBy(
+            () -> client.createTopics(List.of(requestedTopic)).all().get(5, TimeUnit.SECONDS));
+  }
+
   // ============================ Producer =======================================
   public static Producer<byte[], byte[]> createByteProducer(String serverUrl) {
     return new ProducerBuilder<byte[], byte[]>(serverUrl)
