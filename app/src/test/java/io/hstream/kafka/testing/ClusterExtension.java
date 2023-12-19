@@ -21,7 +21,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 @Slf4j
 public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
 
-  static final int CLUSTER_SIZE = 1;
+  static final int CLUSTER_SIZE = 3;
   private static final AtomicInteger count = new AtomicInteger(0);
   private final List<GenericContainer<?>> hservers = new ArrayList<>(CLUSTER_SIZE);
   private final List<String> hserverUrls = new ArrayList<>(CLUSTER_SIZE);
