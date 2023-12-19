@@ -126,7 +126,15 @@ public class TestContainerUtils {
                     + hserverConfs.get(0).port
                     + " node init ");
     logger.info("init res:{}, {}, {}", res.getExitCode(), res.getStdout(), res.getStderr());
-    return hservers;
+    for (int i = 0; i < 10; i++) {
+      Thread.sleep(1000);
+      var clusterIsReady = hservers.get(0).getLogs().contains("Cluster is ready!");
+      if (clusterIsReady) {
+        return hservers;
+      }
+    }
+    logger.info("bootstrap timeout");
+    throw new RuntimeException("bootstrap timeout");
   }
 
   private static String getHStreamMetaStorePreference(String metaHost) {
