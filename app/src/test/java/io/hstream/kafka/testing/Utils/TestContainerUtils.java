@@ -68,7 +68,7 @@ public class TestContainerUtils {
         .withCommand(
             "bash", "-c", " hstream-server kafka" + hserverConf + " --seed-nodes " + seedNodes)
         // .withLogConsumer(msg -> logger.info(msg.getUtf8String()))
-        .waitingFor(Wait.forLogMessage(".*Cluster is ready!.*", 1));
+        .waitingFor(Wait.forLogMessage(".*Server is started on port.*", 1));
   }
 
   public static class HServerCliOpts {
@@ -120,12 +120,21 @@ public class TestContainerUtils {
             .execInContainer(
                 "bash",
                 "-c",
-                "hstream --host 127.0.0.1 "
+                "hstream-kafka-cli --host 127.0.0.1 "
                     // + hserverConfs.get(0).address
                     + " --port "
                     + hserverConfs.get(0).port
-                    + " init ");
-    return hservers;
+                    + " node init ");
+    logger.info("init res:{}, {}, {}", res.getExitCode(), res.getStdout(), res.getStderr());
+    for (int i = 0; i < 10; i++) {
+      Thread.sleep(1000);
+      var clusterIsReady = hservers.get(0).getLogs().contains("Cluster is ready!");
+      if (clusterIsReady) {
+        return hservers;
+      }
+    }
+    logger.info("bootstrap timeout");
+    throw new RuntimeException("bootstrap timeout");
   }
 
   private static String getHStreamMetaStorePreference(String metaHost) {
