@@ -120,7 +120,7 @@ public class TestContainerUtils {
             .execInContainer(
                 "bash",
                 "-c",
-                "hstream-kafka-cli --host 127.0.0.1 "
+                "hstream-kafka --host 127.0.0.1 "
                     // + hserverConfs.get(0).address
                     + " --port "
                     + hserverConfs.get(0).port
