@@ -28,4 +28,6 @@ replay_pid*
 build
 bin
 .logs
+
 MyLocalTest.java
+/local/
