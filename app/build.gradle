@@ -161,6 +161,7 @@ sourceSets {
                 // FIXME: kafka tests is migrated from 3.5, which is not compatible with old version
                 exclude "integration/**"
                 exclude "unit/**"
+                exclude "utils/**"
                 exclude "kafka/**"
                 exclude "other/**"
             }
