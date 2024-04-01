@@ -28,7 +28,7 @@ class KafkaBroker(
 
   val containerName: String = {
     val rand = Random.alphanumeric.take(10).mkString
-    s"kafka-tests-$rand"
+    s"kafka-tests-${scala.util.Properties.userName}-$rand"
   }
 
   // TODO: TMP_FOR_HSTREAM
@@ -41,9 +41,10 @@ class KafkaBroker(
       if (spec == 1) {
         val command = config.testingConfig.get("command").asInstanceOf[String]
         val image = config.testingConfig.get("image").asInstanceOf[String]
+        val rmArg = if (config.testingConfig.get("container_remove").asInstanceOf[Boolean]) "--rm" else ""
         val storeDir = config.testingConfig.get("store_dir").asInstanceOf[String]
         val dockerCmd =
-          s"docker run --rm -d --network host --name $containerName -v $storeDir:/data/store $image $command"
+          s"docker run $rmArg -d --network host --name $containerName -v $storeDir:/data/store $image $command"
         dockerCmd.run()
       } else {
         throw new NotImplementedError("startup: spec is invalid!")
@@ -60,7 +61,9 @@ class KafkaBroker(
       val spec = config.testingConfig.get("spec").asInstanceOf[Int]
       if (spec == 1) {
         // Remove broker container
-        s"docker rm -f $containerName".!
+        if (config.testingConfig.get("container_remove").asInstanceOf[Boolean]) {
+          s"docker rm -f $containerName".!
+        }
 
         // Delete all logs
         val storeAdminPort = config.testingConfig.get("store_admin_port").asInstanceOf[Int]
