@@ -35,9 +35,6 @@ import kafka.cluster.EndPoint
 import kafka.utils.{CoreUtils, Logging}
 import kafka.utils.Implicits._
 
-// Only used for this testing
-class TestingConfig {}
-
 object Defaults {
 
   /**
@@ -146,7 +143,7 @@ object KafkaConfig {
   }
 
   def fromProps(props: Properties, doLog: Boolean): KafkaConfig = {
-    val testingConfig = props.remove("testing").asInstanceOf[java.util.Map[String, Object]]
+    val testingConfig = props.remove("testing").asInstanceOf[Map[String, Object]]
     if (testingConfig == null) new KafkaConfig(props)
     else new KafkaConfig(doLog, props, testingConfig)
   }
@@ -171,13 +168,13 @@ object KafkaConfig {
 class KafkaConfig private (
     doLog: Boolean,
     val props: java.util.Map[_, _],
-    val testingConfig: java.util.Map[_, _] = Collections.emptyMap() // Only used for this testing
+    val testingConfig: Map[String, Object] = Map() // Only used for this testing
 ) extends AbstractConfig(KafkaConfig.configDef, props, doLog)
     with Logging {
 
   def this(props: java.util.Map[_, _]) = this(true, KafkaConfig.populateSynonyms(props))
   def this(props: java.util.Map[_, _], doLog: Boolean) = this(doLog, KafkaConfig.populateSynonyms(props))
-  def this(props: java.util.Map[_, _], testingConfig: java.util.Map[_, _]) =
+  def this(props: java.util.Map[_, _], testingConfig: Map[String, Object]) =
     this(true, KafkaConfig.populateSynonyms(props), testingConfig = testingConfig)
 
   val port = getInt(KafkaConfig.PortProp)

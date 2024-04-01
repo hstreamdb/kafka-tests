@@ -37,14 +37,28 @@ class KafkaBroker(
       // TODO
       throw new NotImplementedError("KafkaBroker.startup")
     } else {
-      val spec = config.testingConfig.get("spec").asInstanceOf[Int]
+      val spec =
+        config.testingConfig.getOrElse("spec", throw new IllegalArgumentException("spec is required")).asInstanceOf[Int]
       if (spec == 1) {
-        val command = config.testingConfig.get("command").asInstanceOf[String]
-        val image = config.testingConfig.get("image").asInstanceOf[String]
-        val rmArg = if (config.testingConfig.get("container_remove").asInstanceOf[Boolean]) "--rm" else ""
-        val storeDir = config.testingConfig.get("store_dir").asInstanceOf[String]
+        val command = config.testingConfig
+          .getOrElse("command", throw new IllegalArgumentException("command is required"))
+          .asInstanceOf[String]
+        val image = config.testingConfig
+          .getOrElse("image", throw new IllegalArgumentException("image is required"))
+          .asInstanceOf[String]
+        val rmArg =
+          if (
+            config.testingConfig
+              .getOrElse("container_remove", throw new IllegalArgumentException("container_remove is required"))
+              .asInstanceOf[Boolean]
+          ) "--rm"
+          else ""
+        val storeDir = config.testingConfig
+          .getOrElse("store_dir", throw new IllegalArgumentException("store_dir is required"))
+          .asInstanceOf[String]
         val dockerCmd =
           s"docker run $rmArg -d --network host --name $containerName -v $storeDir:/data/store $image $command"
+        info(s"=> Start hserver by: $dockerCmd")
         dockerCmd.run()
       } else {
         throw new NotImplementedError("startup: spec is invalid!")
@@ -58,15 +72,22 @@ class KafkaBroker(
       // TODO
       throw new NotImplementedError("KafkaBroker.shutdown")
     } else {
-      val spec = config.testingConfig.get("spec").asInstanceOf[Int]
+      val spec =
+        config.testingConfig.getOrElse("spec", throw new IllegalArgumentException("spec is required")).asInstanceOf[Int]
       if (spec == 1) {
         // Remove broker container
-        if (config.testingConfig.get("container_remove").asInstanceOf[Boolean]) {
+        if (
+          config.testingConfig
+            .getOrElse("container_remove", throw new IllegalArgumentException("container_remove is required"))
+            .asInstanceOf[Boolean]
+        ) {
           s"docker rm -f $containerName".!
         }
 
         // Delete all logs
-        val storeAdminPort = config.testingConfig.get("store_admin_port").asInstanceOf[Int]
+        val storeAdminPort = config.testingConfig
+          .getOrElse("store_admin_port", throw new IllegalArgumentException("store_admin_port is required"))
+          .asInstanceOf[Int]
         val deleteLogProc =
           s"docker run --rm --network host hstreamdb/hstream bash -c 'echo y | hadmin-store --port $storeAdminPort logs remove --path /hstream -r'"
             .run()
@@ -77,7 +98,9 @@ class KafkaBroker(
         // }
 
         // Delete all metastore(zk) nodes
-        val metastorePort = config.testingConfig.get("metastore_port").asInstanceOf[Int]
+        val metastorePort = config.testingConfig
+          .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required"))
+          .asInstanceOf[Int]
         s"docker run --rm --network host zookeeper:3.7 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
       } else {
         throw new NotImplementedError("shutdown: spec is invalid!")
