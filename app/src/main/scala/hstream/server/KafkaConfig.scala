@@ -33,6 +33,7 @@ import scala.collection.{immutable, Map, Seq}
 import scala.annotation.nowarn
 import kafka.cluster.EndPoint
 import kafka.utils.{CoreUtils, Logging}
+import kafka.utils.Implicits._
 
 // Only used for this testing
 class TestingConfig {}
@@ -144,10 +145,23 @@ object KafkaConfig {
     output
   }
 
-  def fromProps(props: Properties): KafkaConfig = {
+  def fromProps(props: Properties, doLog: Boolean): KafkaConfig = {
     val testingConfig = props.remove("testing").asInstanceOf[java.util.Map[String, Object]]
     if (testingConfig == null) new KafkaConfig(props)
-    else new KafkaConfig(props, testingConfig)
+    else new KafkaConfig(doLog, props, testingConfig)
+  }
+
+  def fromProps(props: Properties): KafkaConfig =
+    fromProps(props, true)
+
+  def fromProps(defaults: Properties, overrides: Properties): KafkaConfig =
+    fromProps(defaults, overrides, true)
+
+  def fromProps(defaults: Properties, overrides: Properties, doLog: Boolean): KafkaConfig = {
+    val props = new Properties()
+    props ++= defaults
+    props ++= overrides
+    fromProps(props, doLog)
   }
 
   // TODO: KAFKA_ORIGINAL
