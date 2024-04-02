@@ -299,10 +299,12 @@ object TestUtils extends Logging {
         val brokerContainer = configs.get("broker_container").asInstanceOf[java.util.Map[String, Object]]
         if (brokerContainer != null) {
           val brokerConfig = brokerContainer.get("config").asInstanceOf[java.util.Map[String, Object]]
-          val testingConfig = brokerContainer.get("testing_config").asInstanceOf[java.util.Map[String, Object]]
+          // NOTE: Since this has side effect, do NOT move it inside the following loop (startingIdNumber to endingIdNumber)
+          val basePort = brokerConfig.remove("base_port").asInstanceOf[Int]
+
+          // generate
           val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
             val prop = new Properties
-            val basePort = brokerConfig.remove("base_port").asInstanceOf[Int]
             val port = basePort + idx * 2
             val gossipPort = basePort + idx * 2 + 1
             // broker config
@@ -311,13 +313,28 @@ object TestUtils extends Logging {
             prop.put("gossip.port", gossipPort.toString)
             brokerConfig.asScala.foreach { case (k, v) => prop.put(k, v.toString) }
             // testing config
-            // TODO: support rqlite
-            val metastorePort = testingConfig.get("metastore_port").asInstanceOf[Int]
-            // FIXME: we use `basePort + 1` for seed node, this is a temporary solution
+            val testingConfig: collection.mutable.Map[String, Object] =
+              brokerContainer
+                .get("testing_config")
+                .asInstanceOf[java.util.Map[String, Object]]
+                .asScala
+                .clone()
+            val commandTmpl: String = testingConfig
+              .getOrElse(
+                "command",
+                throw new IllegalArgumentException("command is required in testing_config")
+              )
+              .asInstanceOf[String]
+            val metastorePort = testingConfig.get("metastore_port") match {
+              // TODO: support rqlite
+              case Some(result) => result.asInstanceOf[Int]
+              case None         => throw new IllegalArgumentException("metastore_port is required in testing_config")
+            }
+            // FIXME: we use a fixed port `basePort + 1` for seed node, this is a temporary solution
             val args = s"""--server-id $nodeId --seed-nodes 127.0.0.1:${basePort + 1}
                 --port $port --gossip-port $gossipPort --metastore-uri zk://127.0.0.1:$metastorePort
                 """.stripMargin.linesIterator.mkString(" ").trim
-            testingConfig.put("command", testingConfig.get("command").asInstanceOf[String].format(args))
+            testingConfig.update("command", commandTmpl.format(args))
             prop.put("testing", testingConfig)
 
             prop
