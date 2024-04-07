@@ -37,6 +37,7 @@ import org.apache.kafka.common.network.ListenerName
 import org.apache.kafka.common.resource.ResourcePattern
 import org.apache.kafka.common.security.scram.ScramCredential
 import org.apache.kafka.common.utils.Time
+import scala.sys.process._
 // import org.apache.kafka.controller.ControllerRequestContextUtil.ANONYMOUS_CONTEXT
 
 /**
@@ -130,8 +131,32 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 
   @AfterEach
   override def tearDown(): Unit = {
+    cleanPersistenceData()
     TestUtils.shutdownServers(_brokers)
     super.tearDown()
+  }
+
+  def cleanPersistenceData(): Unit = {
+    val config = configs.head
+
+    // Delete all logs
+    val storeAdminPort = config.testingConfig
+      .getOrElse("store_admin_port", throw new IllegalArgumentException("store_admin_port is required"))
+      .asInstanceOf[Int]
+    val deleteLogProc =
+      s"docker run --rm --network host hstreamdb/hstream bash -c 'echo y | hadmin-store --port $storeAdminPort logs remove --path /hstream -r'"
+        .run()
+    val code = deleteLogProc.exitValue()
+    // TODO: remove a non-exist log should be OK
+    // if (code != 0) {
+    //  throw new RuntimeException(s"Failed to delete logs, exit code: $code")
+    // }
+
+    // Delete all metastore(zk) nodes
+    val metastorePort = config.testingConfig
+      .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required"))
+      .asInstanceOf[Int]
+    s"docker run --rm --network host zookeeper:3.8 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
   }
 
 //   def recreateBrokers(reconfigure: Boolean = false, startup: Boolean = false): Unit = {
