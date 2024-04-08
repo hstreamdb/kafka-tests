@@ -171,10 +171,10 @@ sourceSets {
 }
 
 test {
-    if (System.getenv('CONFIGS_FILE') == null) {
+    if (System.getenv('CONFIG_FILE') == null) {
         def rootDir = project.rootDir
-        environment('CONFIGS_FILE', "${rootDir}/local/config.yaml")
+        environment('CONFIG_FILE', "${rootDir}/local/config.yaml")
     }
 
-    System.out.println("Using CONFIGS_FILE environment variable: " + System.getenv('CONFIGS_FILE'))
+    System.out.println("Using CONFIG_FILE environment variable: " + System.getenv('CONFIG_FILE'))
 }

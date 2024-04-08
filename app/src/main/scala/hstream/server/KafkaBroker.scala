@@ -32,8 +32,8 @@ class KafkaBroker(
   }
 
   // TODO: TMP_FOR_HSTREAM
-  def startup(): Process = {
-    if (sys.env.getOrElse("CONFIGS_FILE", "").trim.isEmpty) {
+  def startup() = {
+    if (sys.env.getOrElse("CONFIG_FILE", "").trim.isEmpty) {
       // TODO
       throw new NotImplementedError("KafkaBroker.startup")
     } else {
@@ -73,7 +73,7 @@ class KafkaBroker(
   }
 
   // TODO: TMP_FOR_HSTREAM
-  def shutdown(): Int = {
+  def shutdown() = {
     if (sys.env.getOrElse("CONFIG_FILE", "").trim.isEmpty) {
       // TODO
       throw new NotImplementedError("KafkaBroker.shutdown")
@@ -104,7 +104,7 @@ class KafkaBroker(
   }
 
   // TODO: TMP_FOR_HSTREAM
-  def awaitShutdown(): Unit = {
+  def awaitShutdown() = {
     if (sys.env.getOrElse("CONFIG_FILE", "").trim.isEmpty) {
       // TODO
       throw new NotImplementedError("KafkaBroker.awaitShutdown")

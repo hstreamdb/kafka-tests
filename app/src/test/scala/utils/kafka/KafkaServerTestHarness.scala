@@ -156,7 +156,7 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
     val metastorePort = config.testingConfig
       .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required"))
       .asInstanceOf[Int]
-    s"docker run --rm --network host zookeeper:3.8 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
+    s"docker run --rm --network host zookeeper:3.7 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
   }
 
 //   def recreateBrokers(reconfigure: Boolean = false, startup: Boolean = false): Unit = {
