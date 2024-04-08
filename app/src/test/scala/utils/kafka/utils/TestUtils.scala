@@ -287,75 +287,42 @@ object TestUtils extends Logging {
   ): Seq[Properties] = {
     val endingIdNumber = startingIdNumber + numConfigs - 1
 
-    val configsFile = sys.env.getOrElse("CONFIGS_FILE", "").trim
-    if (configsFile.nonEmpty) { // Read from yaml file
-      val inputStream = new FileInputStream(configsFile)
-      try {
-        val yaml = new Yaml()
-        val configs = yaml
-          .load(new InputStreamReader(inputStream, "UTF-8"))
-          .asInstanceOf[java.util.Map[String, Object]]
+    val configFile = sys.env.getOrElse("CONFIG_FILE", "").trim
+    // Read from yaml file
+    if (configFile.nonEmpty) {
+      val configs = readConfigFile(configFile)
+      val use = configs
+        .getOrElse("use", throw new IllegalArgumentException("use is required in config file"))
+        .asInstanceOf[String]
+      if (use == "broker_container") {
         // Start hserver by docker
-        val brokerContainer = configs.get("broker_container").asInstanceOf[java.util.Map[String, Object]]
-        if (brokerContainer != null) {
-          val brokerConfig = brokerContainer.get("config").asInstanceOf[java.util.Map[String, Object]]
-          // NOTE: Since this has side effect, do NOT move it inside the following loop (startingIdNumber to endingIdNumber)
-          val basePort = brokerConfig.remove("base_port").asInstanceOf[Int]
-
-          // generate
-          val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
-            val prop = new Properties
-            val port = basePort + idx * 2
-            val gossipPort = basePort + idx * 2 + 1
-            // broker config
-            prop.put("broker.id", nodeId.toString)
-            prop.put("port", port.toString)
-            prop.put("gossip.port", gossipPort.toString)
-            brokerConfig.asScala.foreach { case (k, v) => prop.put(k, v.toString) }
-            // testing config
-            val testingConfig: collection.mutable.Map[String, Object] =
-              brokerContainer
-                .get("testing_config")
-                .asInstanceOf[java.util.Map[String, Object]]
-                .asScala
-                .clone()
-            val commandTmpl: String = testingConfig
-              .getOrElse(
-                "command",
-                throw new IllegalArgumentException("command is required in testing_config")
-              )
-              .asInstanceOf[String]
-            val metastorePort = testingConfig.get("metastore_port") match {
-              // TODO: support rqlite
-              case Some(result) => result.asInstanceOf[Int]
-              case None         => throw new IllegalArgumentException("metastore_port is required in testing_config")
-            }
-            // FIXME: we use a fixed port `basePort + 1` for seed node, this is a temporary solution
-            val args = s"""--server-id $nodeId --seed-nodes 127.0.0.1:${basePort + 1}
-                --port $port --gossip-port $gossipPort --metastore-uri zk://127.0.0.1:$metastorePort
-                """.stripMargin.linesIterator.mkString(" ").trim
-            testingConfig.update("command", commandTmpl.format(args))
-            prop.put("testing", testingConfig)
-
-            prop
-          }
-          return props
-        } else {
-          //
-          val brokersConfig = configs.remove("brokers").asInstanceOf[java.util.List[java.util.Map[String, Object]]]
-          brokersConfig.asScala.map(_.asScala.toMap).map { config =>
-            val props = new Properties
-            config.foreach { case (k, v) => props.put(k, v.toString) }
-            props
-          }
+        val brokerContainer = configs
+          .getOrElse(
+            "broker_container",
+            throw new IllegalArgumentException("broker_container is required in config file")
+          )
+          .asInstanceOf[java.util.Map[String, Object]]
+        return createBrokerConfigsFromBrokerContainer(brokerContainer, startingIdNumber, endingIdNumber)
+      } else if (use == "broker_connections") {
+        // Directly connect to brokers
+        val brokerConnections =
+          configs
+            .getOrElse(
+              "broker_connections",
+              throw new IllegalArgumentException("broker_connections is required in config file")
+            )
+            .asInstanceOf[java.util.List[java.util.Map[String, Object]]]
+        brokerConnections.asScala.map(_.asScala.toMap).map { config =>
+          val props = new Properties
+          config.foreach { case (k, v) => props.put(k, v.toString) }
+          props
         }
-
-      } catch {
-        case e: Throwable => throw e
-      } finally {
-        inputStream.close()
+      } else {
+        throw new IllegalArgumentException("use must be one of [broker_container, broker_connections]")
       }
-    } else {
+    }
+    // Generate
+    else {
       (startingIdNumber to endingIdNumber).map { node =>
         createBrokerConfig(
           node,
@@ -2754,4 +2721,72 @@ object TestUtils extends Logging {
         false
     }
   }
+
+  private def readConfigFile(configFile: String): Map[String, Object] = {
+    val inputStream = new FileInputStream(configFile)
+    try {
+      val yaml = new Yaml()
+      yaml
+        .load(new InputStreamReader(inputStream, "UTF-8"))
+        .asInstanceOf[java.util.Map[String, Object]]
+        .asScala
+    } catch {
+      case e: Throwable => throw e
+    } finally {
+      inputStream.close()
+    }
+  }
+
+  private def createBrokerConfigsFromBrokerContainer(
+      brokerContainer: java.util.Map[String, Object],
+      startingIdNumber: Int,
+      endingIdNumber: Int
+  ): Seq[Properties] = {
+    val brokerConfig = brokerContainer.get("config").asInstanceOf[java.util.Map[String, Object]]
+    // NOTE: Since this has side effect, do NOT move it inside the following loop (startingIdNumber to endingIdNumber)
+    val basePort = brokerConfig.remove("base_port").asInstanceOf[Int]
+    val advertisedAddress = brokerConfig.get("advertised.address").asInstanceOf[String]
+
+    // generate
+    val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
+      val prop = new Properties
+      val port = basePort + idx * 2
+      val gossipPort = basePort + idx * 2 + 1
+      // broker config
+      prop.put("broker.id", nodeId.toString)
+      prop.put("port", port.toString)
+      prop.put("gossip.port", gossipPort.toString)
+      brokerConfig.asScala.foreach { case (k, v) => prop.put(k, v.toString) }
+      // testing config
+      val testingConfig: collection.mutable.Map[String, Object] =
+        brokerContainer
+          .get("testing_config")
+          .asInstanceOf[java.util.Map[String, Object]]
+          .asScala
+          .clone()
+      val commandTmpl: String = testingConfig
+        .getOrElse(
+          "command",
+          throw new IllegalArgumentException("command is required in testing_config")
+        )
+        .asInstanceOf[String]
+      // TODO: support rqlite
+      val metastorePort = testingConfig
+        .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required in testing_config"))
+        .asInstanceOf[Int]
+      // FIXME: we use a fixed port `basePort + 1` for seed node, this is a temporary solution
+      val args = s"""--server-id $nodeId
+                --port $port --gossip-port $gossipPort
+                --seed-nodes 127.0.0.1:${basePort + 1}
+                --advertised-address $advertisedAddress
+                --metastore-uri zk://127.0.0.1:$metastorePort
+                """.stripMargin.linesIterator.mkString(" ").trim
+      testingConfig.update("command", commandTmpl.format(args))
+      prop.put("testing", testingConfig)
+
+      prop
+    }
+    return props
+  }
+
 }
