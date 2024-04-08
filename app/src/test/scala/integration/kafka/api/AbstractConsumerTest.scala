@@ -451,6 +451,7 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     val allNonEmptyAssignments = assignments.forall(assignment => assignment.nonEmpty)
     if (!allNonEmptyAssignments) {
       // at least one consumer got empty assignment
+      info(s"Empty assignment found in $assignments")
       return false
     }
 
@@ -459,6 +460,7 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     if (totalPartitionsInAssignments != partitions.size) {
       // either same partitions got assigned to more than one consumer or some
       // partitions were not assigned
+        info(s"Total partitions in assignments $totalPartitionsInAssignments is not equal to total partitions $partitions")
       return false
     }
 
@@ -467,6 +469,7 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     // Make sure that all unique assignments are the same as 'partitions'
     val uniqueAssignedPartitions = assignments.foldLeft(Set.empty[TopicPartition])(_ ++ _)
     if (uniqueAssignedPartitions != partitions) {
+      info(s"Unique assigned partitions $uniqueAssignedPartitions is not equal to total partitions $partitions")
       return false
     }
 
@@ -476,6 +479,7 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     if (expectedAssignment.nonEmpty) {
       for (assignment <- assignments) {
         if (!expectedAssignment.contains(assignment)) {
+            info(s"Assignment $assignment is not equal to expected assignment $expectedAssignment")
           return false
         }
       }
