@@ -589,6 +589,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
     val producer = createProducer()
     val startingTimestamp = 0
     sendRecords(producer, totalRecords.toInt, tp, startingTimestamp = startingTimestamp)
+    producer.close()
     consumer.assign(List(tp).asJava)
 
     consumer.seekToEnd(List(tp).asJava)
@@ -1395,6 +1396,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
     val producer = createProducer()
     val startingTimestamp = System.currentTimeMillis()
     sendRecords(producer, numRecords, tp, startingTimestamp = startingTimestamp)
+    producer.close()
     val consumer = createConsumer()
     consumer.assign(List(tp).asJava)
     consumeAndVerifyRecords(
@@ -1424,6 +1426,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
     val tp1 = new TopicPartition(topicName, 0)
     val producer = createProducer()
     sendRecords(producer, numRecords, tp1)
+    producer.close()
 
     val consumer = createConsumer()
     consumer.assign(List(tp1).asJava)
