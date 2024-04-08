@@ -115,7 +115,7 @@ gradle.projectsEvaluated {
     }
 }
 
-tasks.named('test') {
+tasks.named('test', Test) {
     useJUnitPlatform()
 }
 
@@ -168,4 +168,13 @@ sourceSets {
             }
         }
     }
+}
+
+test {
+    if (System.getenv('CONFIGS_FILE') == null) {
+        def rootDir = project.rootDir
+        environment('CONFIGS_FILE', "${rootDir}/local/config.yaml")
+    }
+
+    System.out.println("Using CONFIGS_FILE environment variable: " + System.getenv('CONFIGS_FILE'))
 }
