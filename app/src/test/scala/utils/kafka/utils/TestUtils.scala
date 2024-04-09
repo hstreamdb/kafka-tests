@@ -94,6 +94,7 @@ import org.apache.kafka.test.{TestSslUtils, TestUtils => JTestUtils}
 // import org.apache.zookeeper.ZooDefs._
 // import org.apache.zookeeper.data.ACL
 import org.junit.jupiter.api.Assertions._
+import org.junit.jupiter.api.TestInfo
 import org.yaml.snakeyaml.Yaml
 
 import scala.annotation.nowarn
@@ -280,6 +281,7 @@ object TestUtils extends Logging {
   def createBrokerConfigs(
       numConfigs: Int,
       metaStoreUri: String,
+      testInfo: TestInfo,
       storeConfig: String = "/store/logdevice/logdevice.conf",
       numPartitions: Int = 1,
       defaultReplicationFactor: Short = 1,
@@ -290,36 +292,7 @@ object TestUtils extends Logging {
     val configFile = sys.env.getOrElse("CONFIG_FILE", "").trim
     // Read from yaml file
     if (configFile.nonEmpty) {
-      val configs = readConfigFile(configFile)
-      val use = configs
-        .getOrElse("use", throw new IllegalArgumentException("use is required in config file"))
-        .asInstanceOf[String]
-      if (use == "broker_container") {
-        // Start hserver by docker
-        val brokerContainer = configs
-          .getOrElse(
-            "broker_container",
-            throw new IllegalArgumentException("broker_container is required in config file")
-          )
-          .asInstanceOf[java.util.Map[String, Object]]
-        return createBrokerConfigsFromBrokerContainer(brokerContainer, startingIdNumber, endingIdNumber)
-      } else if (use == "broker_connections") {
-        // Directly connect to brokers
-        val brokerConnections =
-          configs
-            .getOrElse(
-              "broker_connections",
-              throw new IllegalArgumentException("broker_connections is required in config file")
-            )
-            .asInstanceOf[java.util.List[java.util.Map[String, Object]]]
-        brokerConnections.asScala.map(_.asScala.toMap).map { config =>
-          val props = new Properties
-          config.foreach { case (k, v) => props.put(k, v.toString) }
-          props
-        }
-      } else {
-        throw new IllegalArgumentException("use must be one of [broker_container, broker_connections]")
-      }
+      parseConfigFile(configFile, startingIdNumber, endingIdNumber, testInfo.getDisplayName())
     }
     // Generate
     else {
@@ -327,6 +300,7 @@ object TestUtils extends Logging {
         createBrokerConfig(
           node,
           metaStoreUri,
+          testInfo,
           storeConfig = storeConfig,
           port = getUnusedPort(),
           numPartitions = numPartitions,
@@ -496,6 +470,7 @@ object TestUtils extends Logging {
   def createBrokerConfig(
       brokerId: Int,
       metaStoreUri: String,
+      testInfo: TestInfo,
       storeConfig: String = "/store/logdevice/logdevice.conf",
       port: Int = getUnusedPort(),
       numPartitions: Int = 1,
@@ -503,18 +478,26 @@ object TestUtils extends Logging {
   ): Properties = {
     val props = new Properties
 
-    props.put(KafkaConfig.BrokerIdProp, brokerId.toString)
-    props.put(KafkaConfig.PortProp, port.toString)
-    props.put(KafkaConfig.AdvertisedAddressProp, "127.0.0.1")
-    props.put(KafkaConfig.MetaStoreUriProp, metaStoreUri)
-    props.put(KafkaConfig.GossipPortProp, getUnusedPort().toString)
-    props.put(KafkaConfig.StoreConfigProp, storeConfig)
-    // props.put(KafkaConfig.AdvertisedListenersProp, )
-    // props.put(KafkaConfig.ListenerSecurityProtocolMapProp, )
-    props.put(KafkaConfig.NumPartitionsProp, numPartitions.toString)
-    props.put(KafkaConfig.DefaultReplicationFactorProp, defaultReplicationFactor.toString)
+    val configFile = sys.env.getOrElse("CONFIG_FILE", "").trim
+    // Read from yaml file
+    if (configFile.nonEmpty) {
+      return parseConfigFile(configFile, brokerId, brokerId, testInfo.getDisplayName())(0)
+    }
+    // Generate
+    else {
+      props.put(KafkaConfig.BrokerIdProp, brokerId.toString)
+      props.put(KafkaConfig.PortProp, port.toString)
+      props.put(KafkaConfig.AdvertisedAddressProp, "127.0.0.1")
+      props.put(KafkaConfig.MetaStoreUriProp, metaStoreUri)
+      props.put(KafkaConfig.GossipPortProp, getUnusedPort().toString)
+      props.put(KafkaConfig.StoreConfigProp, storeConfig)
+      // props.put(KafkaConfig.AdvertisedListenersProp, )
+      // props.put(KafkaConfig.ListenerSecurityProtocolMapProp, )
+      props.put(KafkaConfig.NumPartitionsProp, numPartitions.toString)
+      props.put(KafkaConfig.DefaultReplicationFactorProp, defaultReplicationFactor.toString)
 
-    props
+      props
+    }
   }
 
 //   @nowarn("cat=deprecation")
@@ -2722,6 +2705,49 @@ object TestUtils extends Logging {
     }
   }
 
+  private def parseConfigFile(
+      configFile: String,
+      startingIdNumber: Int,
+      endingIdNumber: Int,
+      testName: String
+  ): Seq[Properties] = {
+    val configs = readConfigFile(configFile)
+    val use = configs
+      .getOrElse("use", throw new IllegalArgumentException("use is required in config file"))
+      .asInstanceOf[String]
+    if (use == "broker_container") {
+      // Start hserver by docker
+      val brokerContainer = configs
+        .getOrElse(
+          "broker_container",
+          throw new IllegalArgumentException("broker_container is required in config file")
+        )
+        .asInstanceOf[java.util.Map[String, Object]]
+      return createBrokerConfigsFromBrokerContainer(
+        brokerContainer,
+        startingIdNumber,
+        endingIdNumber,
+        testName
+      )
+    } else if (use == "broker_connections") {
+      // Directly connect to brokers
+      val brokerConnections =
+        configs
+          .getOrElse(
+            "broker_connections",
+            throw new IllegalArgumentException("broker_connections is required in config file")
+          )
+          .asInstanceOf[java.util.List[java.util.Map[String, Object]]]
+      brokerConnections.asScala.map(_.asScala.toMap).map { config =>
+        val props = new Properties
+        config.foreach { case (k, v) => props.put(k, v.toString) }
+        props
+      }
+    } else {
+      throw new IllegalArgumentException("use must be one of [broker_container, broker_connections]")
+    }
+  }
+
   private def readConfigFile(configFile: String): Map[String, Object] = {
     val inputStream = new FileInputStream(configFile)
     try {
@@ -2740,7 +2766,8 @@ object TestUtils extends Logging {
   private def createBrokerConfigsFromBrokerContainer(
       brokerContainer: java.util.Map[String, Object],
       startingIdNumber: Int,
-      endingIdNumber: Int
+      endingIdNumber: Int,
+      testName: String
   ): Seq[Properties] = {
     val brokerConfig = brokerContainer.get("config").asInstanceOf[java.util.Map[String, Object]]
     // NOTE: Since this has side effect, do NOT move it inside the following loop (startingIdNumber to endingIdNumber)
@@ -2782,11 +2809,16 @@ object TestUtils extends Logging {
                 --metastore-uri zk://127.0.0.1:$metastorePort
                 """.stripMargin.linesIterator.mkString(" ").trim
       testingConfig.update("command", commandTmpl.format(args))
+      testingConfig.put("test.filename", formatTestNameAsFile(testName))
       prop.put("testing", testingConfig)
 
       prop
     }
     return props
+  }
+
+  private def formatTestNameAsFile(testName: String) = {
+    testName.replaceAll("""\(|\)|\s""", "_").replaceAll("_*$", "")
   }
 
 }

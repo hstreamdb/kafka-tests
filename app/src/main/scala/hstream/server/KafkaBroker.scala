@@ -3,6 +3,7 @@ package kafka.server
 import org.apache.kafka.common.network.ListenerName
 import org.apache.kafka.metadata.BrokerState
 import org.apache.kafka.common.utils.Time
+import java.nio.file.{Files, Paths}
 import kafka.utils.Logging
 import kafka.network.SocketServer
 
@@ -73,7 +74,7 @@ class KafkaBroker(
   }
 
   // TODO: TMP_FOR_HSTREAM
-  def shutdown() = {
+  def shutdown(): Unit = {
     if (sys.env.getOrElse("CONFIG_FILE", "").trim.isEmpty) {
       // TODO
       throw new NotImplementedError("KafkaBroker.shutdown")
@@ -86,6 +87,20 @@ class KafkaBroker(
             .getOrElse("spec", throw new IllegalArgumentException("spec is required"))
             .asInstanceOf[Int]
         if (spec == 1) {
+          // Dump broker container logs
+          if (
+            config.testingConfig
+              .getOrElse("container_logs", throw new IllegalArgumentException("container_logs is required"))
+              .asInstanceOf[Boolean]
+          ) {
+            val testFilename = config.testingConfig
+              .getOrElse("test.filename", throw new IllegalArgumentException("test.filename is required"))
+              .asInstanceOf[String]
+            val proj = sys.props.get("user.dir").getOrElse(".")
+            val containerLogsDir = s"$proj/build/reports/logs/$testFilename"
+            Files.createDirectories(Paths.get(containerLogsDir))
+            s"bash -c 'docker logs $containerName > $containerLogsDir/$containerName.log 2>&1'".!
+          }
           // Remove broker container
           if (
             config.testingConfig
@@ -93,9 +108,26 @@ class KafkaBroker(
               .asInstanceOf[Boolean]
           ) {
             s"docker rm -f $containerName".!
-            println(s"Remove container $containerName")
           }
-          0
+
+          // Delete all logs
+          val storeAdminPort = config.testingConfig
+            .getOrElse("store_admin_port", throw new IllegalArgumentException("store_admin_port is required"))
+            .asInstanceOf[Int]
+          val deleteLogProc =
+            s"docker run --rm --network host hstreamdb/hstream bash -c 'echo y | hadmin-store --port $storeAdminPort logs remove --path /hstream -r'"
+              .run()
+          val code = deleteLogProc.exitValue()
+          // TODO: remove a non-exist log should be OK
+          // if (code != 0) {
+          //  throw new RuntimeException(s"Failed to delete logs, exit code: $code")
+          // }
+
+          // Delete all metastore(zk) nodes
+          val metastorePort = config.testingConfig
+            .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required"))
+            .asInstanceOf[Int]
+          s"docker run --rm --network host zookeeper:3.7 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
         } else {
           throw new NotImplementedError("shutdown: spec is invalid!")
         }
