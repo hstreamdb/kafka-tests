@@ -30,4 +30,4 @@ bin
 .logs
 
 MyLocalTest.java
-/local/
+/local*
