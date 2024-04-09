@@ -127,25 +127,33 @@ object KafkaConfig {
   /**
    * Copy a configuration map, populating some keys that we want to treat as synonyms.
    */
-  def populateSynonyms(input: util.Map[_, _]): util.Map[Any, Any] = {
-    val output = new util.HashMap[Any, Any](input)
-    // TODO KAFKA_ORIGINAL
-    // Doesn't need to be done in hstream
-    //
-    // val brokerId = output.get(KafkaConfig.BrokerIdProp)
-    // val nodeId = output.get(KafkaConfig.NodeIdProp)
-    // if (brokerId == null && nodeId != null) {
-    //   output.put(KafkaConfig.BrokerIdProp, nodeId)
-    // } else if (brokerId != null && nodeId == null) {
-    //   output.put(KafkaConfig.NodeIdProp, brokerId)
-    // }
-    output
+  // KAFKA_ORIGINAL
+  // Doesn't need to be done in hstream
+  // def populateSynonyms(input: util.Map[_, _]): util.Map[Any, Any] = {
+  //   val output = new util.HashMap[Any, Any](input)
+  //   val brokerId = output.get(KafkaConfig.BrokerIdProp)
+  //   val nodeId = output.get(KafkaConfig.NodeIdProp)
+  //   if (brokerId == null && nodeId != null) {
+  //     output.put(KafkaConfig.BrokerIdProp, nodeId)
+  //   } else if (brokerId != null && nodeId == null) {
+  //     output.put(KafkaConfig.NodeIdProp, brokerId)
+  //   }
+  //   output
+  // }
+
+  // KAFKA_TO_HSTREAM
+  def rePropsTesting(props: Properties): (Properties, Map[String, Object]) = {
+    val testingConfig = {
+      val x = props.remove("testing").asInstanceOf[Map[String, Object]]
+      if (x == null) Map[String, Object]()
+      else x
+    }
+    (props, testingConfig)
   }
 
+  // KAFKA_TO_HSTREAM
   def fromProps(props: Properties, doLog: Boolean): KafkaConfig = {
-    val testingConfig = props.remove("testing").asInstanceOf[Map[String, Object]]
-    if (testingConfig == null) new KafkaConfig(props)
-    else new KafkaConfig(doLog, props, testingConfig)
+    new KafkaConfig(doLog, rePropsTesting(props))
   }
 
   def fromProps(props: Properties): KafkaConfig =
@@ -172,10 +180,15 @@ class KafkaConfig private (
 ) extends AbstractConfig(KafkaConfig.configDef, props, doLog)
     with Logging {
 
-  def this(props: java.util.Map[_, _]) = this(true, KafkaConfig.populateSynonyms(props))
-  def this(props: java.util.Map[_, _], doLog: Boolean) = this(doLog, KafkaConfig.populateSynonyms(props))
-  def this(props: java.util.Map[_, _], testingConfig: Map[String, Object]) =
-    this(true, KafkaConfig.populateSynonyms(props), testingConfig = testingConfig)
+  // KAFKA_TO_HSTREAM
+  def this(doLog: Boolean, props: (java.util.Map[_, _], Map[String, Object])) =
+    this(doLog, props._1, props._2)
+
+  // KAFKA_TO_HSTREAM
+  def this(props: Properties) = this(true, KafkaConfig.rePropsTesting(props))
+
+  // KAFKA_TO_HSTREAM
+  def this(props: Properties, doLog: Boolean) = this(doLog, KafkaConfig.rePropsTesting(props))
 
   val port = getInt(KafkaConfig.PortProp)
   val advertisedAddress = getString(KafkaConfig.AdvertisedAddressProp)
