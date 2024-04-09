@@ -13,8 +13,6 @@
 package kafka.api
 
 import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.extension.ExtendWith
-import utils.kafka.utils.OnTestFailureExtension
 
 import java.time.Duration
 import java.util
@@ -46,7 +44,6 @@ import scala.collection.mutable
 import scala.collection.mutable.Buffer
 import scala.jdk.CollectionConverters._
 
-@ExtendWith(Array(classOf[OnTestFailureExtension]))
 /* We have some tests in this class instead of `BaseConsumerTest` in order to keep the build time under control. */
 class PlaintextConsumerTest extends BaseConsumerTest {
 
