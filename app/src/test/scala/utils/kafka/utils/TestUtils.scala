@@ -94,6 +94,7 @@ import org.apache.kafka.test.{TestSslUtils, TestUtils => JTestUtils}
 // import org.apache.zookeeper.ZooDefs._
 // import org.apache.zookeeper.data.ACL
 import org.junit.jupiter.api.Assertions._
+import org.junit.jupiter.api.TestInfo
 import org.yaml.snakeyaml.Yaml
 
 import scala.annotation.nowarn
@@ -280,10 +281,11 @@ object TestUtils extends Logging {
   def createBrokerConfigs(
       numConfigs: Int,
       metaStoreUri: String,
+      testInfo: TestInfo,
       storeConfig: String = "/store/logdevice/logdevice.conf",
       numPartitions: Int = 1,
       defaultReplicationFactor: Short = 1,
-      startingIdNumber: Int = 0
+      startingIdNumber: Int = 0,
   ): Seq[Properties] = {
     val endingIdNumber = startingIdNumber + numConfigs - 1
 
@@ -302,7 +304,12 @@ object TestUtils extends Logging {
             throw new IllegalArgumentException("broker_container is required in config file")
           )
           .asInstanceOf[java.util.Map[String, Object]]
-        return createBrokerConfigsFromBrokerContainer(brokerContainer, startingIdNumber, endingIdNumber)
+        return createBrokerConfigsFromBrokerContainer(
+          brokerContainer,
+          startingIdNumber,
+          endingIdNumber,
+          testInfo.getDisplayName()
+        )
       } else if (use == "broker_connections") {
         // Directly connect to brokers
         val brokerConnections =
@@ -2740,7 +2747,8 @@ object TestUtils extends Logging {
   private def createBrokerConfigsFromBrokerContainer(
       brokerContainer: java.util.Map[String, Object],
       startingIdNumber: Int,
-      endingIdNumber: Int
+      endingIdNumber: Int,
+      testName: String
   ): Seq[Properties] = {
     val brokerConfig = brokerContainer.get("config").asInstanceOf[java.util.Map[String, Object]]
     // NOTE: Since this has side effect, do NOT move it inside the following loop (startingIdNumber to endingIdNumber)
@@ -2782,11 +2790,16 @@ object TestUtils extends Logging {
                 --metastore-uri zk://127.0.0.1:$metastorePort
                 """.stripMargin.linesIterator.mkString(" ").trim
       testingConfig.update("command", commandTmpl.format(args))
+      testingConfig.put("test.filename", formatTestNameAsFile(testName))
       prop.put("testing", testingConfig)
 
       prop
     }
     return props
+  }
+
+  private def formatTestNameAsFile(testName: String) = {
+    testName.replaceAll("""\(|\)|\s""", "_").replaceAll("_*$", "")
   }
 
 }

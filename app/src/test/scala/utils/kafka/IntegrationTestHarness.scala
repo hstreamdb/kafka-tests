@@ -54,6 +54,8 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
   private val producers = mutable.Buffer[KafkaProducer[_, _]]()
   private val adminClients = mutable.Buffer[Admin]()
 
+  private var testInfo: TestInfo = _
+
 //   protected def interBrokerListenerName: ListenerName = listenerName
 
   protected def modifyConfigs(props: Seq[Properties]): Unit = {
@@ -70,7 +72,7 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
 //     }
 //     insertControllerListenersIfNeeded(cfgs)
 //     cfgs.map(KafkaConfig.fromProps)
-    val cfgs = TestUtils.createBrokerConfigs(brokerCount, metaStoreConnect)
+    val cfgs = TestUtils.createBrokerConfigs(brokerCount, metaStoreConnect, testInfo)
     modifyConfigs(cfgs)
     cfgs.map(KafkaConfig.fromProps)
   }
@@ -112,6 +114,7 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
 
   @BeforeEach
   override def setUp(testInfo: TestInfo): Unit = {
+    this.testInfo = testInfo
     doSetup(testInfo, createOffsetsTopic = true)
   }
 

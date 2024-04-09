@@ -3,6 +3,7 @@ package kafka.server
 import org.apache.kafka.common.network.ListenerName
 import org.apache.kafka.metadata.BrokerState
 import org.apache.kafka.common.utils.Time
+import java.nio.file.{Files, Paths}
 import kafka.utils.Logging
 import kafka.network.SocketServer
 
@@ -73,7 +74,7 @@ class KafkaBroker(
   }
 
   // TODO: TMP_FOR_HSTREAM
-  def shutdown() = {
+  def shutdown(): Unit = {
     if (!sys.env.getOrElse("CONFIG_FILE", "").trim.nonEmpty) {
       // TODO
       throw new NotImplementedError("KafkaBroker.shutdown")
@@ -86,6 +87,20 @@ class KafkaBroker(
             .getOrElse("spec", throw new IllegalArgumentException("spec is required"))
             .asInstanceOf[Int]
         if (spec == 1) {
+          // Dump broker container logs
+          if (
+            config.testingConfig
+              .getOrElse("container_logs", throw new IllegalArgumentException("container_logs is required"))
+              .asInstanceOf[Boolean]
+          ) {
+            val testFilename = config.testingConfig
+              .getOrElse("test.filename", throw new IllegalArgumentException("test.filename is required"))
+              .asInstanceOf[String]
+            val proj = sys.props.get("user.dir").getOrElse(".")
+            val containerLogsDir = s"$proj/build/reports/logs/$testFilename"
+            Files.createDirectories(Paths.get(containerLogsDir))
+            s"bash -c 'docker logs $containerName > $containerLogsDir/$containerName.log 2>&1'".!
+          }
           // Remove broker container
           if (
             config.testingConfig
