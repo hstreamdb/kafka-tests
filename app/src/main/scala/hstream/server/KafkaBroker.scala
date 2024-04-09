@@ -33,7 +33,7 @@ class KafkaBroker(
 
   // TODO: TMP_FOR_HSTREAM
   def startup() = {
-    if (sys.env.getOrElse("CONFIG_FILE", "").trim.isEmpty) {
+    if (!sys.env.getOrElse("CONFIG_FILE", "").trim.nonEmpty) {
       // TODO
       throw new NotImplementedError("KafkaBroker.startup")
     } else {
@@ -74,7 +74,7 @@ class KafkaBroker(
 
   // TODO: TMP_FOR_HSTREAM
   def shutdown() = {
-    if (sys.env.getOrElse("CONFIG_FILE", "").trim.isEmpty) {
+    if (!sys.env.getOrElse("CONFIG_FILE", "").trim.nonEmpty) {
       // TODO
       throw new NotImplementedError("KafkaBroker.shutdown")
     } else {
@@ -93,9 +93,26 @@ class KafkaBroker(
               .asInstanceOf[Boolean]
           ) {
             s"docker rm -f $containerName".!
-            println(s"Remove container $containerName")
           }
-          0
+
+          // Delete all logs
+          val storeAdminPort = config.testingConfig
+            .getOrElse("store_admin_port", throw new IllegalArgumentException("store_admin_port is required"))
+            .asInstanceOf[Int]
+          val deleteLogProc =
+            s"docker run --rm --network host hstreamdb/hstream bash -c 'echo y | hadmin-store --port $storeAdminPort logs remove --path /hstream -r'"
+              .run()
+          val code = deleteLogProc.exitValue()
+          // TODO: remove a non-exist log should be OK
+          // if (code != 0) {
+          //  throw new RuntimeException(s"Failed to delete logs, exit code: $code")
+          // }
+
+          // Delete all metastore(zk) nodes
+          val metastorePort = config.testingConfig
+            .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required"))
+            .asInstanceOf[Int]
+          s"docker run --rm --network host zookeeper:3.7 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
         } else {
           throw new NotImplementedError("shutdown: spec is invalid!")
         }
@@ -105,7 +122,7 @@ class KafkaBroker(
 
   // TODO: TMP_FOR_HSTREAM
   def awaitShutdown() = {
-    if (sys.env.getOrElse("CONFIG_FILE", "").trim.isEmpty) {
+    if (!sys.env.getOrElse("CONFIG_FILE", "").trim.nonEmpty) {
       // TODO
       throw new NotImplementedError("KafkaBroker.awaitShutdown")
     } else {
