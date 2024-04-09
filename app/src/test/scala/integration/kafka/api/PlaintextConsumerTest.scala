@@ -580,7 +580,6 @@ class PlaintextConsumerTest extends BaseConsumerTest {
   }
 
   @Test
-  @Disabled("need check topic name when create")
   def testPartitionsForInvalidTopic(): Unit = {
     val consumer = createConsumer()
     assertThrows(classOf[InvalidTopicException], () => consumer.partitionsFor(";3# ads,{234"))
@@ -753,7 +752,6 @@ class PlaintextConsumerTest extends BaseConsumerTest {
   }
 
   @Test
-  @Disabled("seems something wrong with reader read")
   def testFetchOutOfRangeOffsetResetConfigEarliest(): Unit = {
     this.consumerConfig.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     // ensure no in-flight fetch request so that the offset can be reset immediately
@@ -776,7 +774,6 @@ class PlaintextConsumerTest extends BaseConsumerTest {
   }
 
   @Test
-  @Disabled("seems something wrong with reader read")
   def testFetchOutOfRangeOffsetResetConfigLatest(): Unit = {
     this.consumerConfig.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
     // ensure no in-flight fetch request so that the offset can be reset immediately
