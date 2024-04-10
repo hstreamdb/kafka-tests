@@ -111,8 +111,6 @@ import scala.util.{Failure, Success, Try}
 object TestUtils extends Logging {
   // --------------------------------------------------------------------------
 
-  // --------------------------------------------------------------------------
-
   val random = JTestUtils.RANDOM
 
   /* 0 gives a random port; you can then retrieve the assigned port from the Socket object. */
@@ -2807,6 +2805,7 @@ object TestUtils extends Logging {
                 --seed-nodes 127.0.0.1:${basePort + 1}
                 --advertised-address $advertisedAddress
                 --metastore-uri zk://127.0.0.1:$metastorePort
+                --store-config /data/store/logdevice.conf
                 """.stripMargin.linesIterator.mkString(" ").trim
       testingConfig.update("command", commandTmpl.format(args))
       testingConfig.put("test.filename", formatTestNameAsFile(testName))
