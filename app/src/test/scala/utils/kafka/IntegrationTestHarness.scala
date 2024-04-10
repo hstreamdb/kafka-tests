@@ -129,6 +129,7 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
 
   def doSetup(testInfo: TestInfo,
               createOffsetsTopic: Boolean): Unit = {
+    this.testInfo = testInfo
     // Generate client security properties before starting the brokers in case certs are needed
     producerConfig ++= clientSecurityProps("producer")
     consumerConfig ++= clientSecurityProps("consumer")
