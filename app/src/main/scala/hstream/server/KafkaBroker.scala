@@ -97,7 +97,7 @@ class KafkaBroker(
               .getOrElse("test.filename", throw new IllegalArgumentException("test.filename is required"))
               .asInstanceOf[String]
             val proj = sys.props.get("user.dir").getOrElse(".")
-            val containerLogsDir = s"$proj/build/reports/logs/$testFilename"
+            val containerLogsDir = s"$proj/build/reports/logs/$testFilename-${System.currentTimeMillis()}"
             Files.createDirectories(Paths.get(containerLogsDir))
             s"bash -c 'docker logs $containerName > $containerLogsDir/$containerName.log 2>&1'".!
           }
