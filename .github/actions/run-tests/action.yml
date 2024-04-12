@@ -1,0 +1,94 @@
+name: "run-tests"
+description: "run-tests"
+
+inputs:
+  tests-repo:
+    description: "The repository of kafka-tests"
+    required: true
+    default: ${{ github.repository }}
+  path:
+    description: "Relative path under $GITHUB_WORKSPACE to place the repository"
+    required: true
+    default: "."
+  hstream-image:
+    description: "hstream-image"
+    required: true
+    default: "hstreamdb/hstream:latest"
+  distribution:
+    description: "The distribution of java"
+    required: true
+    default: "adopt"
+  java-version:
+    description: "The version of java"
+    required: true
+    default: "11"
+  tests_arg:
+    description: "The argument of tests"
+    required: true
+  kafka_client_version:
+    description: "The version of kafka client"
+    required: true
+  is_lagacy_tests:
+    description: "Is lagacy tests"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-java@v2
+      with:
+        distribution: ${{ inputs.distribution }}
+        java-version: ${{ inputs.java-version }}
+        cache: "gradle"
+
+    - name: Start required services
+      if: ${{ inputs.is_lagacy_tests != 'true' }}
+      shell: bash
+      run: |
+        cd ${{ inputs.path }}
+        ./script/dev-tools start-services --services store zookeeper
+
+    - name: Run lagacy tests
+      if: ${{ inputs.is_lagacy_tests == 'true' }}
+      shell: bash
+      run: |
+        cd ${{ inputs.path }}
+        echo "=> Run tests ${{ inputs.tests_arg }} with kafka client ${{ inputs.kafka_client_version }}"
+        KAFKA_CLIENT_VERSION=${{ inputs.kafka_client_version }} ./gradlew test \
+          --fail-fast -i ${{ inputs.tests_arg }}
+
+    - name: Run tests
+      if: ${{ inputs.is_lagacy_tests != 'true' }}
+      shell: bash
+      run: |
+        cd ${{ inputs.path }}
+        echo "=> Run tests ${{ matrix.tests.tests_arg }} with kafka client ${{ matrix.tests.kafka_client_version }}"
+        KAFKA_CLIENT_VERSION=${{ matrix.tests.kafka_client_version }} ./script/run_test.sh \
+          --fail-fast -i ${{ matrix.tests.tests_arg }}
+
+    - name: generate artifacts name (lagacy_tests)
+      if: ${{ inputs.is_lagacy_tests == 'true' && failure() }}
+      shell: bash
+      run: |
+        name="reports-lagacy-kafka-tests-$(uuidgen)"
+        echo "Reports name: $name"
+        echo "name=$name" >> $GITHUB_OUTPUT
+
+    - name: generate artifacts name
+      id: artifacts
+      if: ${{ inputs.is_lagacy_tests != 'true' && failure() }}
+      shell: bash
+      run: |
+        name="reports-kafka-tests-$(uuidgen)"
+        echo "Reports name: $name"
+        # NOTE: canot use GITHUB_ENV
+        # https://github.com/orgs/community/discussions/51280
+        echo "name=$name" >> $GITHUB_OUTPUT
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ failure() }}
+      with:
+        name: ${{ steps.artifacts.outputs.name }}
+        path: |
+          ${{ inputs.path }}/.logs
+          ${{ inputs.path }}/app/build/reports

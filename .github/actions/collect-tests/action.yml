@@ -1,0 +1,48 @@
+name: "collect-tests"
+description: "collect-tests"
+
+inputs:
+  tests-repo:
+    description: "The repository of kafka-tests"
+    required: true
+    default: ${{ github.repository }}
+  path:
+    description: "Relative path under $GITHUB_WORKSPACE to place the repository"
+    default: "."
+    required: true
+  hstream-image:
+    description: "hstream-image"
+    required: true
+    default: "hstreamdb/hstream:latest"
+
+outputs:
+  legacy_tests:
+    description: "legacy_tests"
+    value: ${{ steps.collect_tests.outputs.legacy_tests }}
+  tests:
+    description: "tests"
+    value: ${{ steps.collect_tests.outputs.tests }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-java@v2
+      with:
+        distribution: "adopt"
+        java-version: 11
+        cache: "gradle"
+
+    - name: collect all tests
+      id: collect_tests
+      shell: bash
+      run: |
+        cd ${{ inputs.path }}
+
+        tmp_dir=$(mktemp -d)
+        result_dir=$tmp_dir hstream_image=${{ inputs.hstream-image }} ./script/collect_tests.sh
+
+        legacy_tests=$(cat $tmp_dir/legacy_tests.json)
+        echo "legacy_tests=$legacy_tests" >> $GITHUB_OUTPUT
+
+        tests=$(cat $tmp_dir/tests.json)
+        echo "tests=$tests" >> $GITHUB_OUTPUT

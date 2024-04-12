@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
+hstream_image=${hstream_image:-hstreamdb/hstream:latest}
 CONFIG_FILE=$PWD/local-data/config.yaml
 
 find_freeport() {
@@ -17,9 +18,8 @@ generate_config() {
         store_admin_port=$(cat $env_file | grep STORE_ADMIN_LOCAL_PORT | cut -d'=' -f2)
         zookeeper_port=$(cat $env_file | grep ZOOKEEPER_LOCAL_PORT | cut -d'=' -f2)
         base_port=$(find_freeport)
-        image="hstreamdb/hstream:latest"
         sed -e "s/\${base_port}/$base_port/g" \
-            -e "s#\${image}#$image#g" \
+            -e "s#\${image}#$hstream_image#g" \
             -e "s/\${metastore_port}/$zookeeper_port/g" \
             -e "s#\${store_dir}#$PWD/local-data/logdevice#g" \
             -e "s/\${store_admin_port}/$store_admin_port/g" \

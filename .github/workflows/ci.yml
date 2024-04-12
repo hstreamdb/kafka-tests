@@ -6,16 +6,13 @@ on:
     branches: [main]
 
 jobs:
-  pre-tests:
+  check:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
         distribution: ["adopt"]
         java-version: [11]
-    outputs:
-      legacy_tests: ${{ steps.group_tests.outputs.legacy_tests }}
-      tests: ${{ steps.group_tests.outputs.tests }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -34,17 +31,18 @@ jobs:
           ./gradlew spotlessJavaCheck
           ./gradlew spotlessGroovyGradleCheck
 
-      - name: Group all tests
-        id: group_tests
-        run: |
-          tmp_dir=$(mktemp -d)
-          result_dir=$tmp_dir ./script/collect_tests.sh
+  pre-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      legacy_tests: ${{ steps.collect_tests.outputs.legacy_tests }}
+      tests: ${{ steps.collect_tests.outputs.tests }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
 
-          legacy_tests=$(cat $tmp_dir/legacy_tests.json)
-          echo "legacy_tests=$legacy_tests" >> $GITHUB_OUTPUT
-
-          tests=$(cat $tmp_dir/tests.json)
-          echo "tests=$tests" >> $GITHUB_OUTPUT
+      - id: collect_tests
+        uses: ./.github/actions/collect-tests
 
   legacy-tests:
     needs: pre-tests
@@ -59,34 +57,18 @@ jobs:
         tests: ${{ fromJson(needs.pre-tests.outputs.legacy_tests) }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: "recursive"
 
-      - uses: actions/setup-java@v2
+      - id: run_tests
+        uses: ./.github/actions/run-tests
         with:
           distribution: ${{ matrix.distribution }}
           java-version: ${{ matrix.java-version }}
-          cache: "gradle"
-
-      - run: |
-          UUID=$(uuidgen)
-          echo "Reports id: $UUID"
-          echo "UUID=$UUID" >> $GITHUB_ENV
-
-      - name: Run tests
-        run: |
-          echo "=> Run tests ${{ matrix.tests.tests_arg }} with kafka client ${{ matrix.tests.kafka_client_version }}"
-          KAFKA_CLIENT_VERSION=${{ matrix.tests.kafka_client_version }} ./gradlew test \
-            --fail-fast -i ${{ matrix.tests.tests_arg }}
-
-      - uses: actions/upload-artifact@v3
-        if: ${{ failure() }}
-        with:
-          name: reports-lagacy-tests-${{ env.UUID }}
-          path: |
-            .logs
-            app/build/reports
+          tests_arg: ${{ matrix.tests.tests_arg }}
+          kafka_client_version: ${{ matrix.tests.kafka_client_version }}
+          is_lagacy_tests: 'true'
 
   tests:
     needs: pre-tests
@@ -101,33 +83,15 @@ jobs:
         tests: ${{ fromJson(needs.pre-tests.outputs.tests) }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: "recursive"
 
-      - uses: actions/setup-java@v2
+      - id: run_tests
+        uses: ./.github/actions/run-tests
         with:
           distribution: ${{ matrix.distribution }}
           java-version: ${{ matrix.java-version }}
-          cache: "gradle"
-
-      - run: |
-          UUID=$(uuidgen)
-          echo "Reports id: $UUID"
-          echo "UUID=$UUID" >> $GITHUB_ENV
-
-      - name: Start required services
-        run: ./script/dev-tools start-services --services store zookeeper
-
-      - name: Run tests
-        run: |
-          echo "=> Run tests ${{ matrix.tests.tests_arg }} with kafka client ${{ matrix.tests.kafka_client_version }}"
-          KAFKA_CLIENT_VERSION=${{ matrix.tests.kafka_client_version }} ./script/run_test.sh \
-            --fail-fast -i ${{ matrix.tests.tests_arg }}
-
-      - uses: actions/upload-artifact@v3
-        if: ${{ failure() }}
-        with:
-          name: reports-tests-${{ env.UUID }}
-          path: |
-            app/build/reports
+          tests_arg: ${{ matrix.tests.tests_arg }}
+          kafka_client_version: ${{ matrix.tests.kafka_client_version }}
+          is_lagacy_tests: 'false'
