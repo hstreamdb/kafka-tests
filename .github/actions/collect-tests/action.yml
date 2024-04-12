@@ -2,10 +2,6 @@ name: "collect-tests"
 description: "collect-tests"
 
 inputs:
-  tests-repo:
-    description: "The repository of kafka-tests"
-    required: true
-    default: ${{ github.repository }}
   path:
     description: "Relative path under $GITHUB_WORKSPACE to place the repository"
     default: "."
