@@ -1,0 +1,31 @@
+use: broker_container
+
+broker_container:
+  config:
+    base_port: ${base_port}
+    advertised.address: 127.0.0.1
+
+  testing_config:
+    spec: 1
+    image: ${image}
+    container_remove: true
+    container_logs: true
+    command:
+      # --experimental cpp
+      hstream-server kafka
+        --bind-address 0.0.0.0
+        --metrics-port 0
+        --log-level debug1
+        --log-with-color
+        --log-flush-immediately
+        --store-log-level error
+        --store-compression lz4
+        %s
+    # TODO
+    #init_command: ""
+
+    metastore_port: ${metastore_port}
+    store_dir: ${store_dir}
+    store_admin_port: ${store_admin_port}
+
+# vim: set ft=yaml:
