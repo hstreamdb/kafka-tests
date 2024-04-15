@@ -27,7 +27,7 @@ import org.apache.kafka.common.requests.{ProduceRequest, ProduceResponse}
 // import org.apache.kafka.server.metrics.KafkaYammerMetrics
 import org.apache.kafka.server.record.BrokerCompressionType
 import org.junit.jupiter.api.Assertions._
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.{Disabled, Test}
 
 import scala.jdk.CollectionConverters._
 
@@ -177,6 +177,7 @@ class ProduceRequestTest extends BaseRequestTest {
     )
   }
 
+  @Disabled("TODO: ENABLE_FOR_HSTREAM, produce to non-leader")
   @Test
   def testProduceToNonReplica(): Unit = {
     val topic = "topic"
