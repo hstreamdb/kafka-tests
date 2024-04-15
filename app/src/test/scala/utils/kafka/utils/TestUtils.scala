@@ -2775,8 +2775,8 @@ object TestUtils extends Logging {
     // generate
     val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
       val prop = new Properties
-      val port = basePort + idx * 2
-      val gossipPort = basePort + idx * 2 + 1
+      val port = basePort + nodeId * 2
+      val gossipPort = basePort + nodeId * 2 + 1
       // broker config
       prop.put("broker.id", nodeId.toString)
       prop.put("port", port.toString)
