@@ -19,7 +19,7 @@ import java.net.{InetAddress, ServerSocket}
 import java.nio._
 import java.nio.channels._
 import java.nio.charset.{Charset, StandardCharsets}
-import java.nio.file.{Files, StandardOpenOption}
+import java.nio.file.{Files, Path, Paths, StandardOpenOption}
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util
@@ -2775,8 +2775,8 @@ object TestUtils extends Logging {
     // generate
     val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
       val prop = new Properties
-      val port = basePort + idx * 2
-      val gossipPort = basePort + idx * 2 + 1
+      val port = basePort + nodeId * 2
+      val gossipPort = basePort + nodeId * 2 + 1
       // broker config
       prop.put("broker.id", nodeId.toString)
       prop.put("port", port.toString)
@@ -2818,6 +2818,13 @@ object TestUtils extends Logging {
 
   private def formatTestNameAsFile(testName: String) = {
     testName.replaceAll("""\(|\)|\s""", "_").replaceAll("_*$", "")
+  }
+
+  def generateLogDir(testInfo: TestInfo): Path = {
+    val testFilename = formatTestNameAsFile(testInfo.getDisplayName)
+    val proj = sys.props.get("user.dir").getOrElse(".")
+    val containerLogsDir = s"$proj/build/reports/logs/$testFilename-${System.currentTimeMillis()}"
+    Paths.get(containerLogsDir)
   }
 
 }
