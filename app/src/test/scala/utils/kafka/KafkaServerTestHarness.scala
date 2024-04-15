@@ -326,9 +326,17 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 
   def killBroker(index: Int): Unit = {
     if(alive(index)) {
+      // 记录起始时间
+        val start = System.currentTimeMillis()
       _brokers(index).shutdown()
       _brokers(index).awaitShutdown()
       alive(index) = false
+      // 记录结束时间
+        val end = System.currentTimeMillis()
+      // 打印时间差
+      info("!!!!!!!!!!Kill broker %d, time: %ds".format(index, (end - start) / 1000))
+    } else {
+      info("!!!!!!!!!!Broker %d is already dead, skip killBroker".format(index))
     }
   }
 
