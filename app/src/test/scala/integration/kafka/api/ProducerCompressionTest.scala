@@ -41,7 +41,8 @@ class ProducerCompressionTest extends QuorumTestHarness {
     // TMP_FOR_HSTREAM
     // val props = TestUtils.createBrokerConfig(brokerId, zkConnectOrNull)
     val props = TestUtils.createBrokerConfig(brokerId, metaStoreConnect, testInfo)
-    broker = createBroker(new KafkaConfig(props))
+    val logDir = TestUtils.generateLogDir(testInfo)
+    broker = createBroker(new KafkaConfig(props), logDir = logDir)
   }
 
   @AfterEach

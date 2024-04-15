@@ -16,6 +16,7 @@ package kafka.server
 
 import java.io.{ByteArrayOutputStream, File, PrintStream}
 import java.net.InetSocketAddress
+import java.nio.file.Path
 import java.util
 import java.util.{Collections, Properties}
 import java.util.concurrent.{CompletableFuture, TimeUnit}
@@ -62,6 +63,7 @@ trait QuorumImplementation {
       config: KafkaConfig,
       time: Time = Time.SYSTEM,
       startup: Boolean = true,
+      logDir: Path,
       threadNamePrefix: Option[String] = None
   ): KafkaBroker
 
@@ -79,11 +81,12 @@ class ZooKeeperQuorumImplementation(
       config: KafkaConfig,
       time: Time,
       startup: Boolean,
+      logDir: Path,
       threadNamePrefix: Option[String]
   ): KafkaBroker = {
     // val server = new KafkaServer(config, time, threadNamePrefix, false)
     val server = new KafkaBroker(config, time, threadNamePrefix)
-    if (startup) server.startup()
+    if (startup) server.startup(logDir)
     server
   }
 
@@ -279,9 +282,10 @@ abstract class QuorumTestHarness extends Logging {
       config: KafkaConfig,
       time: Time = Time.SYSTEM,
       startup: Boolean = true,
+      logDir: Path,
       threadNamePrefix: Option[String] = None
   ): KafkaBroker = {
-    implementation.createBroker(config, time, startup, threadNamePrefix)
+    implementation.createBroker(config, time, startup, logDir, threadNamePrefix)
   }
 
 //   def shutdownZooKeeper(): Unit = asZk().shutdown()
