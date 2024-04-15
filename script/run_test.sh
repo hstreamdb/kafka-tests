@@ -17,7 +17,7 @@ generate_config() {
     if [ -f $env_file ]; then
         store_admin_port=$(cat $env_file | grep STORE_ADMIN_LOCAL_PORT | cut -d'=' -f2)
         zookeeper_port=$(cat $env_file | grep ZOOKEEPER_LOCAL_PORT | cut -d'=' -f2)
-        base_port=$(find_freeport)
+        base_port=$(find_freeport)  # Optional
         sed -e "s/\${base_port}/$base_port/g" \
             -e "s#\${image}#$hstream_image#g" \
             -e "s/\${metastore_port}/$zookeeper_port/g" \
