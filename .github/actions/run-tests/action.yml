@@ -61,7 +61,7 @@ runs:
         cd ${{ inputs.path }}
         echo "=> Run tests ${{ matrix.tests.tests_arg }} with kafka client ${{ matrix.tests.kafka_client_version }}"
         KAFKA_CLIENT_VERSION=${{ matrix.tests.kafka_client_version }} \
-        hstream_image=${{ inputs.hstream-image }}
+        hstream_image=${{ inputs.hstream-image }} \
           ./script/run_test.sh --fail-fast -i ${{ matrix.tests.tests_arg }}
 
     - name: generate artifacts name (lagacy_tests)
