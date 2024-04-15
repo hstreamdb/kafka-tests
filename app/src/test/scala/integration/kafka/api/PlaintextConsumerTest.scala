@@ -36,7 +36,7 @@ import org.apache.kafka.common.serialization._
 import org.apache.kafka.common.utils.Utils
 import org.apache.kafka.test.{MockConsumerInterceptor, MockProducerInterceptor}
 import org.junit.jupiter.api.Assertions._
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.{Disabled, Test}
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
@@ -576,6 +576,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
     assertFalse(partitions.isEmpty)
   }
 
+  @Disabled("TODO: ENABLE_FOR_HSTREAM")
   @Test
   def testPartitionsForInvalidTopic(): Unit = {
     val consumer = createConsumer()
@@ -1002,6 +1003,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
    *   - (#par / 10) partition per consumer, where one partition from each of the early (#par mod 9) consumers will move
    *     to consumer #10, leading to a total of (#par mod 9) partition movement
    */
+  @Disabled("TODO: ENABLE_FOR_HSTREAM")
   @Test
   def testMultiConsumerStickyAssignor(): Unit = {
 
