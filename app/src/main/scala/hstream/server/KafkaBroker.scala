@@ -100,24 +100,32 @@ class KafkaBroker(
             if (!Files.exists(fileName)) {
               Files.createFile(fileName)
             }
-//            val code = s"bash -c 'docker logs $containerName >> $fileName 2>&1'".!
-            val cmd = Seq("docker", "logs", containerName)
 
+            val writer = Files.newBufferedWriter(fileName, StandardOpenOption.APPEND)
             val processLogger = ProcessLogger(
-              stdout => Files.writeString(fileName, stdout + "\n", StandardOpenOption.APPEND),
-              stderr => Files.writeString(fileName, stderr + "\n", StandardOpenOption.APPEND)
+              stdout => writer.write(stdout + "\n"),
+              stderr => writer.write(stderr + "\n")
             )
-            info(s"get logs from $containerName in ${System.currentTimeMillis()}")
-            val code = Process(cmd).!(processLogger)
 
-            if (code != 0) {
-              error(s"Failed to dump logs to $fileName, exit code: $code")
-            } else {
-              // add a separator line to separate logs from different runs
-              Files.writeString(fileName, "\n=================================================\n\n", StandardOpenOption.APPEND)
-              info(s"Dump logs to $fileName")
+            try {
+              val cmd = Seq("docker", "logs", containerName)
+              val code = Process(cmd).!(processLogger)
+              if (code != 0) {
+                error(s"Failed to dump logs to $fileName, exit code: $code")
+              } else {
+                // add a separator line to separate logs from different runs
+                writer.write("\n=================================================\n\n")
+                info(s"Dump logs to $fileName")
+              }
+            } catch {
+              case e: Exception =>
+                error(s"Failed to dump logs to $fileName, error: $e")
+            } finally {
+              writer.flush()
+              writer.close()
             }
           }
+
           // Remove broker container
           if (
             config.testingConfig
@@ -126,7 +134,6 @@ class KafkaBroker(
           ) {
             val cmd = s"docker rm -f $containerName"
             Process(cmd).!
-            info(s"Remove container $containerName in ${System.currentTimeMillis()}")
           }
 
           // Delete all logs
