@@ -59,8 +59,10 @@ class KafkaBroker(
           val storeDir = config.testingConfig
             .getOrElse("store_dir", throw new IllegalArgumentException("store_dir is required"))
             .asInstanceOf[String]
+          val extraCommandArgs =
+            (if (config.autoCreateTopicsEnable) "" else "--disable-auto-create-topic")
           val dockerCmd =
-            s"docker run -d --network host --name $containerName -v $storeDir:/data/store $image $command"
+            s"docker run -d --network host --name $containerName -v $storeDir:/data/store $image $command $extraCommandArgs"
           info(s"=> Start hserver by: $dockerCmd")
           val code = dockerCmd.!
           if (code != 0) {
