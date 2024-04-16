@@ -37,7 +37,9 @@ import org.apache.kafka.common.network.ListenerName
 import org.apache.kafka.common.resource.ResourcePattern
 import org.apache.kafka.common.security.scram.ScramCredential
 import org.apache.kafka.common.utils.Time
+import java.nio.file.{Path, Paths}
 // import org.apache.kafka.controller.ControllerRequestContextUtil.ANONYMOUS_CONTEXT
+import scala.sys.process._
 
 /**
  * A test harness that brings up some number of broker nodes
@@ -111,6 +113,30 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
   protected def clientSaslProperties: Option[Properties] = None
   protected def brokerTime(brokerId: Int): Time = Time.SYSTEM
 
+  var testLogDir: Path = _
+
+  def logDir: Path = {
+    if (testLogDir != null) {
+       return testLogDir
+    }
+
+    val config = configs.head
+    if (
+      config.testingConfig
+        .getOrElse("container_logs", throw new IllegalArgumentException("container_logs is required"))
+        .asInstanceOf[Boolean]
+    ) {
+      val testFilename = config.testingConfig
+        .getOrElse("test.filename", throw new IllegalArgumentException("test.filename is required"))
+        .asInstanceOf[String]
+      val proj = sys.props.get("user.dir").getOrElse(".")
+      val containerLogsDir = s"$proj/build/reports/logs/$testFilename-${System.currentTimeMillis()}"
+      val dirs = Paths.get(containerLogsDir)
+      testLogDir = dirs
+    }
+    testLogDir
+  }
+
   @BeforeEach
   override def setUp(testInfo: TestInfo): Unit = {
     super.setUp(testInfo)
@@ -121,8 +147,7 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
     // default implementation is a no-op, it is overridden by subclasses if required
     configureSecurityBeforeServersStart(testInfo)
 
-    createBrokers(startup = true)
-
+    createBrokers(startup = true, logDir)
 
     // default implementation is a no-op, it is overridden by subclasses if required
     configureSecurityAfterServersStart()
@@ -302,6 +327,7 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
       }
       _brokers(i).startup()
       alive(i) = true
+      info("Restart broker %d".format(i))
     }
   }
 
@@ -357,7 +383,7 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 //     }
 //   }
 
-  private def createBrokers(startup: Boolean): Unit = {
+  private def createBrokers(startup: Boolean, logDir: Path): Unit = {
     // Add each broker to `brokers` buffer as soon as it is created to ensure that brokers
     // are shutdown cleanly in tearDown even if a subsequent broker fails to start
     val potentiallyRegeneratedConfigs = configs

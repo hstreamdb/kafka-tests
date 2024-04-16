@@ -3,7 +3,7 @@ package kafka.server
 import org.apache.kafka.common.network.ListenerName
 import org.apache.kafka.metadata.BrokerState
 import org.apache.kafka.common.utils.Time
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths, StandardOpenOption}
 import kafka.utils.Logging
 import kafka.network.SocketServer
 
@@ -15,6 +15,7 @@ import scala.util.Random
 
 class KafkaBroker(
     val config: KafkaConfig,
+    val logDir: Path,
     time: Time = Time.SYSTEM,
     threadNamePrefix: Option[String] = None
 ) extends Logging {
@@ -61,7 +62,10 @@ class KafkaBroker(
           val dockerCmd =
             s"docker run -d --network host --name $containerName -v $storeDir:/data/store $image $command"
           info(s"=> Start hserver by: $dockerCmd")
-          dockerCmd.run()
+          val code = dockerCmd.!
+          if (code != 0) {
+            throw new RuntimeException(s"Failed to start broker, exit code: $code")
+          }
         } else {
           throw new NotImplementedError("startup: spec is invalid!")
         }
@@ -91,13 +95,28 @@ class KafkaBroker(
               .getOrElse("container_logs", throw new IllegalArgumentException("container_logs is required"))
               .asInstanceOf[Boolean]
           ) {
-            val testFilename = config.testingConfig
-              .getOrElse("test.filename", throw new IllegalArgumentException("test.filename is required"))
-              .asInstanceOf[String]
-            val proj = sys.props.get("user.dir").getOrElse(".")
-            val containerLogsDir = s"$proj/build/reports/logs/$testFilename-${System.currentTimeMillis()}"
-            Files.createDirectories(Paths.get(containerLogsDir))
-            s"bash -c 'docker logs $containerName > $containerLogsDir/$containerName.log 2>&1'".!
+            Files.createDirectories(logDir)
+            val fileName = Paths.get(s"$logDir/$containerName.log")
+            if (!Files.exists(fileName)) {
+              Files.createFile(fileName)
+            }
+//            val code = s"bash -c 'docker logs $containerName >> $fileName 2>&1'".!
+            val cmd = Seq("docker", "logs", containerName)
+
+            val processLogger = ProcessLogger(
+              stdout => Files.writeString(fileName, stdout + "\n", StandardOpenOption.APPEND),
+              stderr => Files.writeString(fileName, stderr + "\n", StandardOpenOption.APPEND)
+            )
+            info(s"get logs from $containerName in ${System.currentTimeMillis()}")
+            val code = Process(cmd).!(processLogger)
+
+            if (code != 0) {
+              error(s"Failed to dump logs to $fileName, exit code: $code")
+            } else {
+              // add a separator line to separate logs from different runs
+              Files.writeString(fileName, "\n=================================================\n\n", StandardOpenOption.APPEND)
+              info(s"Dump logs to $fileName")
+            }
           }
           // Remove broker container
           if (
@@ -105,7 +124,9 @@ class KafkaBroker(
               .getOrElse("container_remove", throw new IllegalArgumentException("container_remove is required"))
               .asInstanceOf[Boolean]
           ) {
-            s"docker rm -f $containerName".!
+            val cmd = s"docker rm -f $containerName"
+            Process(cmd).!
+            info(s"Remove container $containerName in ${System.currentTimeMillis()}")
           }
 
           // Delete all logs
