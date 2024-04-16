@@ -14,12 +14,14 @@
 // From: scala/unit/kafka/integration/KafkaServerTestHarness.scala
 package kafka.integration
 
-import java.io.File
+import kafka.network.SocketServer
+
+import java.io.{DataInputStream, DataOutputStream, File}
 import java.util
 import java.util.Arrays
 import kafka.server.QuorumTestHarness
 import kafka.server._
-import kafka.utils.TestUtils
+import kafka.utils.{NotNothing, TestUtils}
 import org.apache.kafka.common.security.auth.SecurityProtocol
 import org.junit.jupiter.api.{AfterEach, BeforeEach, TestInfo}
 
@@ -30,9 +32,18 @@ import kafka.utils.TestUtils.{createAdminClient, resource}
 import org.apache.kafka.common.acl.AccessControlEntry
 import org.apache.kafka.common.{KafkaException, Uuid}
 import org.apache.kafka.common.network.ListenerName
+import org.apache.kafka.common.protocol.ApiKeys
+import org.apache.kafka.common.requests.{AbstractRequest, AbstractResponse, ApiVersionsRequest, ApiVersionsResponse, MetadataRequest, MetadataResponse, RequestHeader, ResponseHeader}
 import org.apache.kafka.common.resource.ResourcePattern
 import org.apache.kafka.common.security.scram.ScramCredential
-import org.apache.kafka.common.utils.Time
+import org.apache.kafka.common.utils.{Time, Utils}
+import org.apache.kafka.metadata.BrokerState
+
+import java.net.Socket
+import java.nio.ByteBuffer
+import scala.annotation.nowarn
+import scala.reflect.ClassTag
+import java.nio.file.{Path, Paths}
 // import org.apache.kafka.controller.ControllerRequestContextUtil.ANONYMOUS_CONTEXT
 
 /**
@@ -322,44 +333,171 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 //     servers.filter(s => s.config.brokerId == controllerId).head
 //   }
 //
-//   def getTopicIds(names: Seq[String]): Map[String, Uuid] = {
-//     val result = new util.HashMap[String, Uuid]()
-//     if (isKRaftTest()) {
-//       val topicIdsMap = controllerServer.controller.findTopicIds(ANONYMOUS_CONTEXT, names.asJava).get()
-//       names.foreach { name =>
-//         val response = topicIdsMap.get(name)
-//         result.put(name, response.result())
-//       }
-//     } else {
-//       val topicIdsMap = getController().kafkaController.controllerContext.topicIds.toMap
-//       names.foreach { name =>
-//         if (topicIdsMap.contains(name)) result.put(name, topicIdsMap.get(name).get)
-//       }
-//     }
-//     result.asScala.toMap
-//   }
 
-//   // hstream: implemented in BaseRequestTest
-//   def getTopicIds(): Map[String, Uuid] = {
-//     if (isKRaftTest()) {
-//       controllerServer.controller.findAllTopicIds(ANONYMOUS_CONTEXT).get().asScala.toMap
-//     } else {
-//       getController().kafkaController.controllerContext.topicIds.toMap
-//     }
-//   }
-//
-//   // hstream: implemented in BaseRequestTest
-//   def getTopicNames(): Map[Uuid, String] = {
-//     if (isKRaftTest()) {
-//       val result = new util.HashMap[Uuid, String]()
-//       controllerServer.controller.findAllTopicIds(ANONYMOUS_CONTEXT).get().entrySet().forEach {
-//         e => result.put(e.getValue(), e.getKey())
-//       }
-//       result.asScala.toMap
-//     } else {
-//       getController().kafkaController.controllerContext.topicNames.toMap
-//     }
-//   }
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  private var correlationId = 0
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  def anySocketServer: SocketServer = {
+    brokers
+      .find { broker =>
+        val state = broker.brokerState
+        state != BrokerState.NOT_RUNNING && state != BrokerState.SHUTTING_DOWN
+      }
+      .map(_.socketServer)
+      .getOrElse(throw new IllegalStateException("No live broker is available"))
+  }
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  private def apiVersions: ApiVersionsResponse = {
+    val request = new ApiVersionsRequest.Builder().build()
+    connectAndReceive[ApiVersionsResponse](request, anySocketServer)
+  }
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  def findProperApiVersion(apiKey: ApiKeys): Short = {
+    val version = apiVersions.apiVersion(apiKey.id)
+    if (version == null) throw new IllegalArgumentException(s"API key $apiKey is not supported by the broker")
+    apiKey.latestVersion().min(version.maxVersion)
+  }
+
+  // Move from: BaseRequestTest.scala
+  def connect(socketServer: SocketServer = anySocketServer, listenerName: ListenerName = listenerName): Socket = {
+    new Socket("localhost", socketServer.boundPort(listenerName))
+  }
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  private def sendRequest(socket: Socket, request: Array[Byte]): Unit = {
+    val outgoing = new DataOutputStream(socket.getOutputStream)
+    outgoing.writeInt(request.length)
+    outgoing.write(request)
+    outgoing.flush()
+  }
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  def receive[T <: AbstractResponse](socket: Socket, apiKey: ApiKeys, version: Short)(implicit
+                                                                                      classTag: ClassTag[T],
+                                                                                      @nowarn("cat=unused") nn: NotNothing[T]
+  ): T = {
+    val incoming = new DataInputStream(socket.getInputStream)
+    val len = incoming.readInt()
+
+    val responseBytes = new Array[Byte](len)
+    incoming.readFully(responseBytes)
+
+    val responseBuffer = ByteBuffer.wrap(responseBytes)
+    ResponseHeader.parse(responseBuffer, apiKey.responseHeaderVersion(version))
+
+    AbstractResponse.parseResponse(apiKey, responseBuffer, version) match {
+      case response: T => response
+      case response =>
+        throw new ClassCastException(
+          s"Expected response with type ${classTag.runtimeClass}, but found ${response.getClass}"
+        )
+    }
+  }
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  def sendAndReceive[T <: AbstractResponse](
+                                             request: AbstractRequest,
+                                             socket: Socket,
+                                             clientId: String = "client-id",
+                                             correlationId: Option[Int] = None
+                                           )(implicit classTag: ClassTag[T], nn: NotNothing[T]): T = {
+    send(request, socket, clientId, correlationId)
+    receive[T](socket, request.apiKey, request.version)
+  }
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  def connectAndReceive[T <: AbstractResponse](
+                                                request: AbstractRequest,
+                                                destination: SocketServer = anySocketServer,
+                                                listenerName: ListenerName = listenerName
+                                              )(implicit classTag: ClassTag[T], nn: NotNothing[T]): T = {
+    val socket = connect(destination, listenerName)
+    try sendAndReceive[T](request, socket)
+    finally socket.close()
+  }
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  /**
+   * Serializes and sends the request to the given api.
+   */
+  def send(
+            request: AbstractRequest,
+            socket: Socket,
+            clientId: String = "client-id",
+            correlationId: Option[Int] = None
+          ): Unit = {
+    val header = nextRequestHeader(request.apiKey, request.version, clientId, correlationId)
+    sendWithHeader(request, header, socket)
+  }
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  def sendWithHeader(request: AbstractRequest, header: RequestHeader, socket: Socket): Unit = {
+    val serializedBytes = Utils.toArray(request.serializeWithHeader(header))
+    sendRequest(socket, serializedBytes)
+  }
+
+  // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
+  def nextRequestHeader[T <: AbstractResponse](
+                                                apiKey: ApiKeys,
+                                                apiVersion: Short,
+                                                clientId: String = "client-id",
+                                                correlationIdOpt: Option[Int] = None
+                                              ): RequestHeader = {
+    val correlationId = correlationIdOpt.getOrElse {
+      this.correlationId += 1
+      this.correlationId
+    }
+    new RequestHeader(apiKey, apiVersion, clientId, correlationId)
+  }
+
+  //   def getTopicIds(names: Seq[String]): Map[String, Uuid] = {
+  //     val result = new util.HashMap[String, Uuid]()
+  //     if (isKRaftTest()) {
+  //       val topicIdsMap = controllerServer.controller.findTopicIds(ANONYMOUS_CONTEXT, names.asJava).get()
+  //       names.foreach { name =>
+  //         val response = topicIdsMap.get(name)
+  //         result.put(name, response.result())
+  //       }
+  //     } else {
+  //       val topicIdsMap = getController().kafkaController.controllerContext.topicIds.toMap
+  //       names.foreach { name =>
+  //         if (topicIdsMap.contains(name)) result.put(name, topicIdsMap.get(name).get)
+  //       }
+  //     }
+  //     result.asScala.toMap
+  //   }
+
+  def getTopicIds(): Map[String, Uuid] = {
+    // if (isKRaftTest()) {
+    //   controllerServer.controller.findAllTopicIds(ANONYMOUS_CONTEXT).get().asScala.toMap
+    // } else {
+    //   getController().kafkaController.controllerContext.topicIds.toMap
+    // }
+    val reqVer = findProperApiVersion(ApiKeys.METADATA)
+    val request = MetadataRequest.Builder.allTopics.build(reqVer)
+    val response = connectAndReceive[MetadataResponse](request, anySocketServer)
+    if (reqVer >= 10) { // TopicId only exists in version 10 and later
+      response.data().topics().asScala.map(t => t.name() -> t.topicId()).toMap
+    } else {
+      response.data().topics().asScala.map(t => t.name() -> Uuid.ZERO_UUID).toMap
+    }
+  }
+
+  def getTopicNames(): Map[Uuid, String] = {
+    // if (isKRaftTest()) {
+    //   val result = new util.HashMap[Uuid, String]()
+    //   controllerServer.controller.findAllTopicIds(ANONYMOUS_CONTEXT).get().entrySet().forEach {
+    //     e => result.put(e.getValue(), e.getKey())
+    //   }
+    //   result.asScala.toMap
+    // } else {
+    //   getController().kafkaController.controllerContext.topicNames.toMap
+    // }
+    getTopicIds().map(_.swap)
+  }
 
   private def createBrokers(startup: Boolean): Unit = {
     // Add each broker to `brokers` buffer as soon as it is created to ensure that brokers
