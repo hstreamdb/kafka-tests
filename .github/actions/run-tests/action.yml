@@ -65,12 +65,23 @@ runs:
           ./script/run_test.sh --fail-fast -i ${{ matrix.tests.tests_arg }}
 
     - name: generate artifacts name (lagacy_tests)
+      id: artifacts_lagacy
       if: ${{ inputs.is_lagacy_tests == 'true' && failure() }}
       shell: bash
       run: |
         name="reports-lagacy-kafka-tests-$(uuidgen)"
         echo "Reports name: $name"
+        # NOTE: canot use GITHUB_ENV
+        # https://github.com/orgs/community/discussions/51280
         echo "name=$name" >> $GITHUB_OUTPUT
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ inputs.is_lagacy_tests == 'true' && failure() }}
+      with:
+        name: ${{ steps.artifacts_lagacy.outputs.name }}
+        path: |
+          ${{ inputs.path }}/.logs
+          ${{ inputs.path }}/app/build/reports
 
     - name: generate artifacts name
       id: artifacts
@@ -84,9 +95,8 @@ runs:
         echo "name=$name" >> $GITHUB_OUTPUT
 
     - uses: actions/upload-artifact@v4
-      if: ${{ failure() }}
+      if: ${{ inputs.is_lagacy_tests != 'true' && failure() }}
       with:
         name: ${{ steps.artifacts.outputs.name }}
         path: |
-          ${{ inputs.path }}/.logs
           ${{ inputs.path }}/app/build/reports
