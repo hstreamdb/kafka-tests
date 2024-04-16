@@ -52,7 +52,7 @@ runs:
         echo "=> Run tests ${{ inputs.tests_arg }} with kafka client ${{ inputs.kafka_client_version }}"
         KAFKA_CLIENT_VERSION=${{ inputs.kafka_client_version }} \
         HSTREAM_IMAGE_NAME=${{ inputs.hstream-image }} \
-          ./gradlew test --fail-fast -i ${{ inputs.tests_arg }}
+          ./gradlew test -i --rerun-tasks ${{ inputs.tests_arg }}
 
     - name: Run tests
       if: ${{ inputs.is_lagacy_tests != 'true' }}
@@ -62,7 +62,7 @@ runs:
         echo "=> Run tests ${{ matrix.tests.tests_arg }} with kafka client ${{ matrix.tests.kafka_client_version }}"
         KAFKA_CLIENT_VERSION=${{ matrix.tests.kafka_client_version }} \
         hstream_image=${{ inputs.hstream-image }} \
-          ./script/run_test.sh --fail-fast -i ${{ matrix.tests.tests_arg }}
+          ./script/run_test.sh -i --rerun-tasks ${{ matrix.tests.tests_arg }}
 
     - name: generate artifacts name (lagacy_tests)
       id: artifacts_lagacy
