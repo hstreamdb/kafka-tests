@@ -7,6 +7,9 @@ import java.nio.file.{Files, Paths}
 import kafka.utils.Logging
 import kafka.network.SocketServer
 
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.sys.process._
 import scala.util.Random
 
@@ -52,18 +55,11 @@ class KafkaBroker(
           val image = config.testingConfig
             .getOrElse("image", throw new IllegalArgumentException("image is required"))
             .asInstanceOf[String]
-          val rmArg =
-            if (
-              config.testingConfig
-                .getOrElse("container_remove", throw new IllegalArgumentException("container_remove is required"))
-                .asInstanceOf[Boolean]
-            ) "--rm"
-            else ""
           val storeDir = config.testingConfig
             .getOrElse("store_dir", throw new IllegalArgumentException("store_dir is required"))
             .asInstanceOf[String]
           val dockerCmd =
-            s"docker run $rmArg -d --network host --name $containerName -v $storeDir:/data/store $image $command"
+            s"docker run -d --network host --name $containerName -v $storeDir:/data/store $image $command"
           info(s"=> Start hserver by: $dockerCmd")
           dockerCmd.run()
         } else {
@@ -71,6 +67,8 @@ class KafkaBroker(
         }
       }
     }
+
+    awaitStartup()
   }
 
   // TODO: TMP_FOR_HSTREAM
@@ -143,6 +141,30 @@ class KafkaBroker(
     } else {
       // TODO
     }
+  }
+
+  // --------------------------------------------------------------------------
+  // For hstream
+
+  private def awaitStartup(retries: Int = 20): Unit = {
+    if (retries <= 0) {
+      s"docker logs $containerName".!
+      throw new RuntimeException("Failed to start hstream!")
+    }
+    val port = config.port
+    val f = Future {
+      try {
+        val socket = new java.net.Socket("127.0.0.1", port)
+        socket.close()
+        info("=> The server port is open at " + port)
+      } catch {
+        case e: java.net.ConnectException =>
+          info("=> Retry to connect to the server port " + port)
+          Thread.sleep(1000)
+          awaitStartup(retries - 1)
+      }
+    }
+    Await.result(f, 60.second)
   }
 
 }

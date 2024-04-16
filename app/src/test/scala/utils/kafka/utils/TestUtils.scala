@@ -2767,21 +2767,38 @@ object TestUtils extends Logging {
       endingIdNumber: Int,
       testName: String
   ): Seq[Properties] = {
-    val brokerConfig = brokerContainer.get("config").asInstanceOf[java.util.Map[String, Object]]
+    val brokerConfig = brokerContainer.get("config").asInstanceOf[java.util.Map[String, Object]].asScala
     // NOTE: Since this has side effect, do NOT move it inside the following loop (startingIdNumber to endingIdNumber)
-    val basePort = brokerConfig.remove("base_port").asInstanceOf[Int]
-    val advertisedAddress = brokerConfig.get("advertised.address").asInstanceOf[String]
+    val basePort = brokerConfig.remove("base_port").asInstanceOf[Option[Int]]
+    val advertisedAddress = brokerConfig
+      .getOrElse(
+        "advertised.address",
+        throw new IllegalArgumentException("advertised.address is required in broker_container")
+      )
+      .asInstanceOf[String]
+
+    // FIXME: we use a fixed port (the first gossipPort) for seed node, this is a temporary solution
+    var fstGossipPort: Int = -1
 
     // generate
     val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
       val prop = new Properties
-      val port = basePort + idx * 2
-      val gossipPort = basePort + idx * 2 + 1
+      val port = basePort match {
+        case None    => getUnusedPort()
+        case Some(p) => p + idx * 2
+      }
+      val gossipPort = basePort match {
+        case None    => getUnusedPort()
+        case Some(p) => p + idx * 2 + 1
+      }
+      if (idx == 0) {
+        fstGossipPort = gossipPort
+      }
       // broker config
       prop.put("broker.id", nodeId.toString)
       prop.put("port", port.toString)
       prop.put("gossip.port", gossipPort.toString)
-      brokerConfig.asScala.foreach { case (k, v) => prop.put(k, v.toString) }
+      brokerConfig.foreach { case (k, v) => prop.put(k, v.toString) }
       // testing config
       val testingConfig: collection.mutable.Map[String, Object] =
         brokerContainer
@@ -2799,10 +2816,10 @@ object TestUtils extends Logging {
       val metastorePort = testingConfig
         .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required in testing_config"))
         .asInstanceOf[Int]
-      // FIXME: we use a fixed port `basePort + 1` for seed node, this is a temporary solution
+      // FIXME: we use a fixed port (the first gossipPort) for seed node, this is a temporary solution
       val args = s"""--server-id $nodeId
                 --port $port --gossip-port $gossipPort
-                --seed-nodes 127.0.0.1:${basePort + 1}
+                --seed-nodes 127.0.0.1:$fstGossipPort
                 --advertised-address $advertisedAddress
                 --metastore-uri zk://127.0.0.1:$metastorePort
                 --store-config /data/store/logdevice.conf

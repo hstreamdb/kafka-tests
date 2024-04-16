@@ -2,7 +2,9 @@ use: broker_container
 
 broker_container:
   config:
-    base_port: ${base_port}
+    # Optional. If no base_port, all ports will be random.
+    #
+    #base_port: ${base_port}
     advertised.address: 127.0.0.1
 
   testing_config:
@@ -15,7 +17,7 @@ broker_container:
       hstream-server kafka
         --bind-address 0.0.0.0
         --metrics-port 0
-        --log-level debug1
+        --log-level debug
         --log-with-color
         --log-flush-immediately
         --store-log-level error
