@@ -14,6 +14,8 @@
 // From: scala/integration/kafka/server/QuorumTestHarness.scala
 package kafka.server
 
+import kafka.utils.TestInfoUtils
+
 import java.io.{ByteArrayOutputStream, File, PrintStream}
 import java.net.InetSocketAddress
 import java.util
@@ -169,9 +171,9 @@ abstract class QuorumTestHarness extends Logging {
 
 //   val bootstrapRecords: ListBuffer[ApiMessageAndVersion] = ListBuffer()
 //
-//   def isKRaftTest(): Boolean = {
-//     TestInfoUtils.isKRaft(testInfo)
-//   }
+   def isKRaftTest(): Boolean = {
+     TestInfoUtils.isKRaft(testInfo)
+   }
 //
 //   def isZkMigrationTest(): Boolean = {
 //     TestInfoUtils.isZkMigrationTest(testInfo)

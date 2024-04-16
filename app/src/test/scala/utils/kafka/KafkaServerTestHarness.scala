@@ -17,7 +17,6 @@ package kafka.integration
 import kafka.network.SocketServer
 
 import java.io.{DataInputStream, DataOutputStream, File}
-import java.util
 import java.util.Arrays
 import kafka.server.QuorumTestHarness
 import kafka.server._
