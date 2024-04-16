@@ -194,6 +194,7 @@ class KafkaConfig private (
   val advertisedAddress = getString(KafkaConfig.AdvertisedAddressProp)
   val brokerId = getInt(KafkaConfig.BrokerIdProp)
   val numPartitions = getInt(KafkaConfig.NumPartitionsProp)
+  val autoCreateTopicsEnable = getBoolean(KafkaConfig.AutoCreateTopicsEnableProp)
   val defaultReplicationFactor: Int = getInt(KafkaConfig.DefaultReplicationFactorProp)
 
   // Use advertised listeners if defined, fallback to listeners otherwise
