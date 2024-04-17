@@ -16,7 +16,6 @@ package kafka.server
 
 import java.io.{ByteArrayOutputStream, File, PrintStream}
 import java.net.InetSocketAddress
-import java.nio.file.Path
 import java.util
 import java.util.{Collections, Properties}
 import java.util.concurrent.{CompletableFuture, TimeUnit}
@@ -74,7 +73,6 @@ class ZooKeeperQuorumImplementation(
     // val zkConnect: String,
     // val zkClient: KafkaZkClient,
     // val adminZkClient: AdminZkClient,
-    val logDir: Path,
     val log: Logging
 ) extends QuorumImplementation {
   override def createBroker(
@@ -84,7 +82,7 @@ class ZooKeeperQuorumImplementation(
       threadNamePrefix: Option[String]
   ): KafkaBroker = {
     // val server = new KafkaServer(config, time, threadNamePrefix, false)
-    val server = new KafkaBroker(config, logDir, time, threadNamePrefix)
+    val server = new KafkaBroker(config, time, threadNamePrefix)
     if (startup) server.startup()
     server
   }
@@ -410,13 +408,11 @@ abstract class QuorumTestHarness extends Logging {
     //     if (zkClient != null) CoreUtils.swallow(zkClient.close(), this)
     //     throw t
     // }
-    val logDir = TestUtils.generateLogDir(testInfo)
     new ZooKeeperQuorumImplementation(
       // zookeeper,
       // zkConnect,
       // zkClient,
       // adminZkClient,
-      logDir,
       this
     )
   }
@@ -457,7 +453,7 @@ object QuorumTestHarness {
    */
   @BeforeAll
   def setUpClass(): Unit = {
-    // TestUtils.verifyNoUnexpectedThreads("@BeforeAll")
+    TestUtils.verifyNoUnexpectedThreads("@BeforeAll")
   }
 
   /**
@@ -465,6 +461,6 @@ object QuorumTestHarness {
    */
   @AfterAll
   def tearDownClass(): Unit = {
-    // TestUtils.verifyNoUnexpectedThreads("@AfterAll")
+    TestUtils.verifyNoUnexpectedThreads("@AfterAll")
   }
 }

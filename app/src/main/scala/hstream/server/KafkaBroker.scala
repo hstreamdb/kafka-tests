@@ -15,7 +15,6 @@ import scala.util.Random
 
 class KafkaBroker(
     val config: KafkaConfig,
-    val logDir: Path,
     time: Time = Time.SYSTEM,
     threadNamePrefix: Option[String] = None
 ) extends Logging {
@@ -97,35 +96,7 @@ class KafkaBroker(
               .getOrElse("container_logs", throw new IllegalArgumentException("container_logs is required"))
               .asInstanceOf[Boolean]
           ) {
-            Files.createDirectories(logDir)
-            val fileName = Paths.get(s"$logDir/$containerName.log")
-            if (!Files.exists(fileName)) {
-              Files.createFile(fileName)
-            }
-
-            val writer = Files.newBufferedWriter(fileName, StandardOpenOption.APPEND)
-            val processLogger = ProcessLogger(
-              stdout => writer.write(stdout + "\n"),
-              stderr => writer.write(stderr + "\n")
-            )
-
-            try {
-              val cmd = Seq("docker", "logs", containerName)
-              val code = Process(cmd).!(processLogger)
-              if (code != 0) {
-                error(s"Failed to dump logs to $fileName, exit code: $code")
-              } else {
-                // add a separator line to separate logs from different runs
-                writer.write("\n=================================================\n\n")
-                info(s"Dump logs to $fileName")
-              }
-            } catch {
-              case e: Exception =>
-                error(s"Failed to dump logs to $fileName, error: $e")
-            } finally {
-              writer.flush()
-              writer.close()
-            }
+            dumpContainerLogs()
           }
 
           // Remove broker container
@@ -134,8 +105,7 @@ class KafkaBroker(
               .getOrElse("container_remove", throw new IllegalArgumentException("container_remove is required"))
               .asInstanceOf[Boolean]
           ) {
-            val cmd = s"docker rm -f $containerName"
-            Process(cmd).!
+            s"docker rm -f $containerName".!
           }
 
           // Delete all logs
@@ -195,6 +165,46 @@ class KafkaBroker(
       }
     }
     Await.result(f, 60.second)
+  }
+
+  private def dumpContainerLogs() = {
+    val containerLogsDir = config.testingConfig
+      .getOrElse("container_logs_dir", throw new IllegalArgumentException("container.logs_dir is required"))
+      .asInstanceOf[Path]
+    Files.createDirectories(containerLogsDir)
+
+    // FIXME: use "docker logs" may cause incomplete logs (? need to investigate)
+    //
+    // s"bash -c 'docker logs $containerName >> $containerLogsDir/$containerName.log 2>&1'".!
+
+    val fileName = Paths.get(s"$containerLogsDir/$containerName.log")
+    if (!Files.exists(fileName)) {
+      Files.createFile(fileName)
+    }
+
+    val writer = Files.newBufferedWriter(fileName, StandardOpenOption.APPEND)
+    val processLogger = ProcessLogger(
+      stdout => writer.write(stdout + "\n"),
+      stderr => writer.write(stderr + "\n")
+    )
+
+    try {
+      val cmd = Seq("docker", "logs", containerName)
+      val code = Process(cmd).!(processLogger)
+      if (code != 0) {
+        error(s"Failed to dump logs to $fileName, exit code: $code")
+      } else {
+        // add a separator line to separate logs from different runs
+        writer.write("\n=================================================\n\n")
+        info(s"Dump logs to $fileName")
+      }
+    } catch {
+      case e: Exception =>
+        error(s"Failed to dump logs to $fileName, error: $e")
+    } finally {
+      writer.flush()
+      writer.close()
+    }
   }
 
 }

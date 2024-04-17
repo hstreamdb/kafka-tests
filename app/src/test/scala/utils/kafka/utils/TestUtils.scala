@@ -100,6 +100,7 @@ import org.yaml.snakeyaml.Yaml
 import scala.annotation.nowarn
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.collection.{mutable, Map, Seq}
+import scala.sys.process._
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
@@ -124,6 +125,8 @@ object TestUtils extends Logging {
       serverSocket.close()
     }
   }
+
+  val currentTestTimeMillis = System.currentTimeMillis()
 
 //   /* Incorrect broker port which can used by kafka clients in tests. This port should not be used
 //    by any other service and hence we use a reserved port. */
@@ -2644,30 +2647,33 @@ object TestUtils extends Logging {
 //     envelopRequest
 //   }
 
-//   def verifyNoUnexpectedThreads(context: String): Unit = {
-//     // Threads which may cause transient failures in subsequent tests if not shutdown.
-//     // These include threads which make connections to brokers and may cause issues
-//     // when broker ports are reused (e.g. auto-create topics) as well as threads
-//     // which reset static JAAS configuration.
-//     val unexpectedThreadNames = Set(
-//       ControllerEventManager.ControllerEventThreadName,
-//       KafkaProducer.NETWORK_THREAD_PREFIX,
-//       AdminClientUnitTestEnv.kafkaAdminClientNetworkThreadPrefix(),
-//       AbstractCoordinator.HEARTBEAT_THREAD_PREFIX,
-//       QuorumTestHarness.ZkClientEventThreadSuffix,
-//       QuorumController.CONTROLLER_THREAD_SUFFIX
-//     )
-//
-//     def unexpectedThreads: Set[String] = {
-//       val allThreads = Thread.getAllStackTraces.keySet.asScala.map(thread => thread.getName)
-//       allThreads.filter(t => unexpectedThreadNames.exists(s => t.contains(s))).toSet
-//     }
-//
-//     val (unexpected, _) = TestUtils.computeUntilTrue(unexpectedThreads)(_.isEmpty)
-//     assertTrue(unexpected.isEmpty,
-//       s"Found ${unexpected.size} unexpected threads during $context: " +
-//         s"${unexpected.mkString("`", ",", "`")}")
-//   }
+  // TODO: TMP_FOR_HSTREAM
+  def verifyNoUnexpectedThreads(context: String): Unit = {
+    // Threads which may cause transient failures in subsequent tests if not shutdown.
+    // These include threads which make connections to brokers and may cause issues
+    // when broker ports are reused (e.g. auto-create topics) as well as threads
+    // which reset static JAAS configuration.
+    val unexpectedThreadNames = Set(
+      // ControllerEventManager.ControllerEventThreadName,
+      KafkaProducer.NETWORK_THREAD_PREFIX,
+      AdminClientUnitTestEnv.kafkaAdminClientNetworkThreadPrefix(),
+      AbstractCoordinator.HEARTBEAT_THREAD_PREFIX
+      // QuorumTestHarness.ZkClientEventThreadSuffix,
+      // QuorumController.CONTROLLER_THREAD_SUFFIX
+    )
+
+    def unexpectedThreads: Set[String] = {
+      val allThreads = Thread.getAllStackTraces.keySet.asScala.map(thread => thread.getName)
+      allThreads.filter(t => unexpectedThreadNames.exists(s => t.contains(s))).toSet
+    }
+
+    val (unexpected, _) = TestUtils.computeUntilTrue(unexpectedThreads)(_.isEmpty)
+    assertTrue(
+      unexpected.isEmpty,
+      s"Found ${unexpected.size} unexpected threads during $context: " +
+        s"${unexpected.mkString("`", ",", "`")}"
+    )
+  }
 
 //   class TestControllerRequestCompletionHandler(expectedResponse: Option[AbstractResponse] = None)
 //     extends ControllerRequestCompletionHandler {
@@ -2825,7 +2831,10 @@ object TestUtils extends Logging {
                 --store-config /data/store/logdevice.conf
                 """.stripMargin.linesIterator.mkString(" ").trim
       testingConfig.update("command", commandTmpl.format(args))
-      testingConfig.put("test.filename", formatTestNameAsFile(testName))
+      testingConfig.put(
+        "container_logs_dir",
+        getContainerLogsDir(testName, testingConfig.getOrElse("container_logs_clean", false).asInstanceOf[Boolean])
+      )
       prop.put("testing", testingConfig)
 
       prop
@@ -2837,10 +2846,16 @@ object TestUtils extends Logging {
     testName.replaceAll("""\(|\)|\s""", "_").replaceAll("_*$", "")
   }
 
-  def generateLogDir(testInfo: TestInfo): Path = {
-    val testFilename = formatTestNameAsFile(testInfo.getDisplayName)
+  private def getContainerLogsDir(testName: String, cleanBefore: Boolean = false): Path = {
+    val testFilename = formatTestNameAsFile(testName)
     val proj = sys.props.get("user.dir").getOrElse(".")
-    val containerLogsDir = s"$proj/build/reports/logs/$testFilename-${System.currentTimeMillis()}"
+    val containerLogsDir = s"$proj/build/reports/logs/$testFilename-$currentTestTimeMillis"
+    // FIXME: how about moving clean function into "QuorumTestHarness",
+    // Which means, in QuorumTestHarness, do "rm -rf $proj/build/reports/logs" once.
+    if (cleanBefore) {
+      // TODO: Safer way
+      s"bash -c \"rm -r $proj/build/reports/logs/$testFilename-*\"".!
+    }
     Paths.get(containerLogsDir)
   }
 

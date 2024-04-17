@@ -12,6 +12,7 @@ broker_container:
     image: ${image}
     container_remove: true
     container_logs: true
+    container_logs_clean: true
     command:
       # --experimental cpp
       hstream-server kafka
