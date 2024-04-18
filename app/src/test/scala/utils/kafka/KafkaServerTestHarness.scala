@@ -1,18 +1,14 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the NOTICE
+ * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
+ * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
  */
 
 // From: scala/unit/kafka/integration/KafkaServerTestHarness.scala
@@ -27,7 +23,7 @@ import kafka.utils.TestUtils
 import org.apache.kafka.common.security.auth.SecurityProtocol
 import org.junit.jupiter.api.{AfterEach, BeforeEach, TestInfo}
 
-import scala.collection.{Seq, mutable}
+import scala.collection.{mutable, Seq}
 import scala.jdk.CollectionConverters._
 import java.util.Properties
 import kafka.utils.TestUtils.{createAdminClient, resource}
@@ -53,8 +49,8 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
   def brokers: mutable.Buffer[KafkaBroker] = _brokers
 
   /**
-   * Get the list of brokers, as instances of KafkaServer.
-   * This method should only be used when dealing with brokers that use ZooKeeper.
+   * Get the list of brokers, as instances of KafkaServer. This method should only be used when dealing with brokers
+   * that use ZooKeeper.
    */
   // def servers: mutable.Buffer[KafkaServer] = {
   //    checkIsZKTest()
@@ -75,18 +71,18 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
    * Override this in case ACLs or security credentials must be set before `servers` are started.
    *
    * This is required in some cases because of the topic creation in the setup of `IntegrationTestHarness`. If the ACLs
-   * are only set later, tests may fail. The failure could manifest itself as a cluster action
-   * authorization exception when processing an update metadata request (controller -> broker) or in more obscure
-   * ways (e.g. __consumer_offsets topic replication fails because the metadata cache has no brokers as a previous
-   * update metadata request failed due to an authorization exception).
+   * are only set later, tests may fail. The failure could manifest itself as a cluster action authorization exception
+   * when processing an update metadata request (controller -> broker) or in more obscure ways (e.g. __consumer_offsets
+   * topic replication fails because the metadata cache has no brokers as a previous update metadata request failed due
+   * to an authorization exception).
    *
    * The default implementation of this method is a no-op.
    */
   def configureSecurityBeforeServersStart(testInfo: TestInfo): Unit = {}
 
   /**
-   * Override this in case Tokens or security credentials needs to be created after `servers` are started.
-   * The default implementation of this method is a no-op.
+   * Override this in case Tokens or security credentials needs to be created after `servers` are started. The default
+   * implementation of this method is a no-op.
    */
   def configureSecurityAfterServersStart(): Unit = {}
 
@@ -162,9 +158,8 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 //   }
 
   /**
-   * Create a topic.
-   * Wait until the leader is elected and the metadata is propagated to all brokers.
-   * Return the leader for each partition.
+   * Create a topic. Wait until the leader is elected and the metadata is propagated to all brokers. Return the leader
+   * for each partition.
    */
   // def createTopic(
   //   topic: String,
@@ -197,12 +192,12 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
   //   }
   // }
   def createTopic(
-    topic: String,
-    numPartitions: Int = 1,
-    replicationFactor: Int = 1,
-    topicConfig: Properties = new Properties,
-    listenerName: ListenerName = listenerName,
-    adminClientConfig: Properties = new Properties
+      topic: String,
+      numPartitions: Int = 1,
+      replicationFactor: Int = 1,
+      topicConfig: Properties = new Properties,
+      listenerName: ListenerName = listenerName,
+      adminClientConfig: Properties = new Properties
   ): scala.collection.immutable.Map[Int, Int] = {
     resource(createAdminClient(brokers, listenerName, adminClientConfig)) { admin =>
       TestUtils.createTopicWithAdmin(
@@ -243,23 +238,33 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 //         servers
 //       )
 //     }
-//
-//   def deleteTopic(
-//     topic: String,
-//     listenerName: ListenerName = listenerName
-//   ): Unit = {
-//     if (isKRaftTest()) {
-//       resource(createAdminClient(brokers, listenerName)) { admin =>
-//         TestUtils.deleteTopicWithAdmin(
-//           admin = admin,
-//           topic = topic,
-//           brokers = aliveBrokers)
-//       }
-//     } else {
-//       adminZkClient.deleteTopic(topic)
-//     }
-//   }
-//
+
+  // KAFKA_TO_HSTREAM
+  //
+  // def deleteTopic(
+  //   topic: String,
+  //   listenerName: ListenerName = listenerName
+  // ): Unit = {
+  //   if (isKRaftTest()) {
+  //     resource(createAdminClient(brokers, listenerName)) { admin =>
+  //       TestUtils.deleteTopicWithAdmin(
+  //         admin = admin,
+  //         topic = topic,
+  //         brokers = aliveBrokers)
+  //     }
+  //   } else {
+  //     adminZkClient.deleteTopic(topic)
+  //   }
+  // }
+  def deleteTopic(
+      topic: String,
+      listenerName: ListenerName = listenerName
+  ): Unit = {
+    resource(createAdminClient(brokers, listenerName)) { admin =>
+      TestUtils.deleteTopicWithAdmin(admin = admin, topic = topic, brokers = aliveBrokers)
+    }
+  }
+
 //   def addAndVerifyAcls(acls: Set[AccessControlEntry], resource: ResourcePattern): Unit = {
 //     TestUtils.addAndVerifyAcls(brokers, acls, resource, controllerServers)
 //   }
@@ -269,8 +274,7 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 //   }
 
   /**
-   * Pick a broker at random and kill it if it isn't already dead
-   * Return the id of the broker killed
+   * Pick a broker at random and kill it if it isn't already dead Return the id of the broker killed
    */
   def killRandomBroker(): Int = {
     val index = TestUtils.random.nextInt(_brokers.length)
@@ -279,7 +283,7 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
   }
 
   def killBroker(index: Int): Unit = {
-    if(alive(index)) {
+    if (alive(index)) {
       _brokers(index).shutdown()
       _brokers(index).awaitShutdown()
       alive(index) = false
@@ -295,7 +299,7 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
     }
     if (configs.isEmpty)
       throw new KafkaException("Must supply at least one server config.")
-    for(i <- _brokers.indices if !alive(i)) {
+    for (i <- _brokers.indices if !alive(i)) {
       if (reconfigure) {
         _brokers(i) = createBrokerFromConfig(configs(i))
       }
