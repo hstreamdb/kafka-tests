@@ -96,6 +96,7 @@ class KafkaBroker(
               .getOrElse("container_logs", throw new IllegalArgumentException("container_logs is required"))
               .asInstanceOf[Boolean]
           ) {
+            info("=> dump container logs...")
             dumpContainerLogs()
           }
 
@@ -105,6 +106,7 @@ class KafkaBroker(
               .getOrElse("container_remove", throw new IllegalArgumentException("container_remove is required"))
               .asInstanceOf[Boolean]
           ) {
+            info(s"=> Remove container $containerName...")
             s"docker rm -f $containerName".!
           }
 
@@ -115,6 +117,7 @@ class KafkaBroker(
           val deleteLogProc =
             s"docker run --rm --network host hstreamdb/hstream bash -c 'echo y | hadmin-store --port $storeAdminPort logs remove --path /hstream -r'"
               .run()
+          info("=> Delete all hstore logs...")
           val code = deleteLogProc.exitValue()
           // TODO: remove a non-exist log should be OK
           // if (code != 0) {
@@ -125,6 +128,7 @@ class KafkaBroker(
           val metastorePort = config.testingConfig
             .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required"))
             .asInstanceOf[Int]
+          info("=> Delete all zk nodes...")
           s"docker run --rm --network host zookeeper:3.7 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
         } else {
           throw new NotImplementedError("shutdown: spec is invalid!")

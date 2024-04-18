@@ -2843,7 +2843,7 @@ object TestUtils extends Logging {
   }
 
   private def formatTestNameAsFile(testName: String) = {
-    testName.replaceAll("""\(|\)|\s""", "_").replaceAll("_*$", "")
+    testName.replaceAll("""\(|\)|\s|\[|\]|=""", "_").replaceAll("(^_*)|(_*$)", "")
   }
 
   private def getContainerLogsDir(testName: String, cleanBefore: Boolean = false): Path = {
@@ -2854,7 +2854,7 @@ object TestUtils extends Logging {
     // Which means, in QuorumTestHarness, do "rm -rf $proj/build/reports/logs" once.
     if (cleanBefore) {
       // TODO: Safer way
-      s"bash -c \"rm -r $proj/build/reports/logs/$testFilename-*\"".!
+      s"bash -c \"rm -rf $proj/build/reports/logs/$testFilename-*\"".!
     }
     Paths.get(containerLogsDir)
   }
