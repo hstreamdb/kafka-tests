@@ -26,6 +26,7 @@ import java.util
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.{Callable, CompletableFuture, ExecutionException, Executors, TimeUnit}
 import java.util.{Arrays, Collections, Optional, Properties}
+import scala.util.Using
 // import com.yammer.metrics.core.{Gauge, Histogram, Meter}
 
 // import javax.net.ssl.X509TrustManager
@@ -1510,24 +1511,25 @@ object TestUtils extends Logging {
       AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
       brokers.head.config.effectiveAdvertisedListeners.map(_.connectionString).mkString(",")
     )
-    val admin = Admin.create(adminClientProperties)
 
-    waitUntilTrue(
-      () => {
-        describeTopic(admin, topic).partitions().get(partition) != null
-      },
-      "Partition [%s,%d] metadata not propagated after %d ms".format(topic, partition, timeout),
-      waitTimeMs = timeout
-    )
+    Using(Admin.create(adminClientProperties)) { admin =>
+      waitUntilTrue(
+        () => {
+          describeTopic(admin, topic).partitions().get(partition) != null
+        },
+        "Partition [%s,%d] metadata not propagated after %d ms".format(topic, partition, timeout),
+        waitTimeMs = timeout
+      )
 
-    val description = describeTopic(admin, topic)
-    val p = description.partitions().get(partition)
-    new UpdateMetadataPartitionState()
-      .setTopicName(topic)
-      .setPartitionIndex(partition)
-      .setLeader(p.leader().id())
-      .setIsr(p.isr().asScala.map(x => Integer.valueOf(x.id())).asJava)
-      .setReplicas(p.replicas().asScala.map(x => Integer.valueOf(x.id())).asJava)
+      val description = describeTopic(admin, topic)
+      val p = description.partitions().get(partition)
+      new UpdateMetadataPartitionState()
+        .setTopicName(topic)
+        .setPartitionIndex(partition)
+        .setLeader(p.leader().id())
+        .setIsr(p.isr().asScala.map(x => Integer.valueOf(x.id())).asJava)
+        .setReplicas(p.replicas().asScala.map(x => Integer.valueOf(x.id())).asJava)
+    }.get
   }
 
 //   /**
