@@ -15,7 +15,7 @@
 package kafka.utils
 
 import java.io._
-import java.net.{InetAddress, ServerSocket}
+import java.net.{InetAddress, ServerSocket, Socket}
 import java.nio._
 import java.nio.channels._
 import java.nio.charset.{Charset, StandardCharsets}
@@ -119,12 +119,27 @@ object TestUtils extends Logging {
   val RandomPort = 0
 
   def getUnusedPort(): Int = {
+    // There is no need to be done in a try/finally
     val serverSocket = new ServerSocket(0)
-    try {
-      serverSocket.getLocalPort()
-    } finally {
-      serverSocket.close()
-    }
+    val port = serverSocket.getLocalPort()
+    serverSocket.close()
+
+    // wait until the port is released
+    waitUntilTrue(
+      () => {
+        try {
+          val sock = new Socket("localhost", port)
+          sock.close()
+          false
+        } catch {
+          case _: Exception => true
+        }
+      },
+      s"Port $port is still in use",
+      waitTimeMs = 60000
+    )
+
+    port
   }
 
   val currentTestTimeMillis = System.currentTimeMillis()
