@@ -31,4 +31,13 @@ broker_container:
     store_dir: ${store_dir}
     store_admin_port: ${store_admin_port}
 
+# Uncomment the following and set `use: broker_connections`
+# to enable broker_connections
+#
+#broker_connections:
+#  - broker.id: 1
+#    port: 9092
+#    gossip.port: 9093
+#    advertised.address: 127.0.0.1
+
 # vim: set ft=yaml:
