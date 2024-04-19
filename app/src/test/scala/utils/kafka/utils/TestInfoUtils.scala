@@ -33,17 +33,19 @@ class EmptyTestInfo extends TestInfo {
 
 object TestInfoUtils {
   def isKRaft(testInfo: TestInfo): Boolean = {
-    if (testInfo.getDisplayName().contains("quorum=")) {
-      if (testInfo.getDisplayName().contains("quorum=kraft")) {
-        true
-      } else if (testInfo.getDisplayName().contains("quorum=zk")) {
-        false
-      } else {
-        throw new RuntimeException(s"Unknown quorum value")
-      }
-    } else {
-      false
-    }
+//    if (testInfo.getDisplayName().contains("quorum=")) {
+//      if (testInfo.getDisplayName().contains("quorum=kraft")) {
+//        true
+//      } else if (testInfo.getDisplayName().contains("quorum=zk")) {
+//        false
+//      } else {
+//        throw new RuntimeException(s"Unknown quorum value")
+//      }
+//    } else {
+//      false
+//    }
+    // KAFKA_TO_HSTREAM
+    false
   }
 
   def isZkMigrationTest(testInfo: TestInfo): Boolean = {

@@ -26,6 +26,7 @@ import java.util
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.{Callable, CompletableFuture, ExecutionException, Executors, TimeUnit}
 import java.util.{Arrays, Collections, Optional, Properties}
+import scala.util.Using
 // import com.yammer.metrics.core.{Gauge, Histogram, Meter}
 
 // import javax.net.ssl.X509TrustManager
@@ -128,9 +129,9 @@ object TestUtils extends Logging {
 
   val currentTestTimeMillis = System.currentTimeMillis()
 
-//   /* Incorrect broker port which can used by kafka clients in tests. This port should not be used
-//    by any other service and hence we use a reserved port. */
-//   val IncorrectBrokerPort = 225
+   /* Incorrect broker port which can used by kafka clients in tests. This port should not be used
+    by any other service and hence we use a reserved port. */
+   val IncorrectBrokerPort = 225
 
 //   /** Port to use for unit tests that mock/don't require a real ZK server. */
 //   val MockZkPort = 1
@@ -1510,24 +1511,25 @@ object TestUtils extends Logging {
       AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG,
       brokers.head.config.effectiveAdvertisedListeners.map(_.connectionString).mkString(",")
     )
-    val admin = Admin.create(adminClientProperties)
 
-    waitUntilTrue(
-      () => {
-        describeTopic(admin, topic).partitions().get(partition) != null
-      },
-      "Partition [%s,%d] metadata not propagated after %d ms".format(topic, partition, timeout),
-      waitTimeMs = timeout
-    )
+    Using(Admin.create(adminClientProperties)) { admin =>
+      waitUntilTrue(
+        () => {
+          describeTopic(admin, topic).partitions().get(partition) != null
+        },
+        "Partition [%s,%d] metadata not propagated after %d ms".format(topic, partition, timeout),
+        waitTimeMs = timeout
+      )
 
-    val description = describeTopic(admin, topic)
-    val p = description.partitions().get(partition)
-    new UpdateMetadataPartitionState()
-      .setTopicName(topic)
-      .setPartitionIndex(partition)
-      .setLeader(p.leader().id())
-      .setIsr(p.isr().asScala.map(x => Integer.valueOf(x.id())).asJava)
-      .setReplicas(p.replicas().asScala.map(x => Integer.valueOf(x.id())).asJava)
+      val description = describeTopic(admin, topic)
+      val p = description.partitions().get(partition)
+      new UpdateMetadataPartitionState()
+        .setTopicName(topic)
+        .setPartitionIndex(partition)
+        .setLeader(p.leader().id())
+        .setIsr(p.isr().asScala.map(x => Integer.valueOf(x.id())).asJava)
+        .setReplicas(p.replicas().asScala.map(x => Integer.valueOf(x.id())).asJava)
+    }.get
   }
 
 //   /**
@@ -2374,14 +2376,14 @@ object TestUtils extends Logging {
 //     (out.toString, err.toString)
 //   }
 //
-//   def assertFutureExceptionTypeEquals(future: KafkaFuture[_], clazz: Class[_ <: Throwable],
-//                                       expectedErrorMessage: Option[String] = None): Unit = {
-//     val cause = assertThrows(classOf[ExecutionException], () => future.get()).getCause
-//     assertTrue(clazz.isInstance(cause), "Expected an exception of type " + clazz.getName + "; got type " +
-//       cause.getClass.getName)
-//     expectedErrorMessage.foreach(message => assertTrue(cause.getMessage.contains(message), s"Received error message : ${cause.getMessage}" +
-//       s" does not contain expected error message : $message"))
-//   }
+   def assertFutureExceptionTypeEquals(future: KafkaFuture[_], clazz: Class[_ <: Throwable],
+                                       expectedErrorMessage: Option[String] = None): Unit = {
+     val cause = assertThrows(classOf[ExecutionException], () => future.get()).getCause
+     assertTrue(clazz.isInstance(cause), "Expected an exception of type " + clazz.getName + "; got type " +
+       cause.getClass.getName)
+     expectedErrorMessage.foreach(message => assertTrue(cause.getMessage.contains(message), s"Received error message : ${cause.getMessage}" +
+       s" does not contain expected error message : $message"))
+   }
 //
 //   def assertBadConfigContainingMessage(props: Properties, expectedExceptionContainsText: String): Unit = {
 //     try {
