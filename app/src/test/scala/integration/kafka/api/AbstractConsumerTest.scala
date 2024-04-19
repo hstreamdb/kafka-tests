@@ -64,7 +64,6 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
   this.consumerConfig.setProperty(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "100")
   this.consumerConfig.setProperty(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, "6000")
 
-
   override protected def brokerPropertyOverrides(properties: Properties): Unit = {
     // TODO HSTREAM
     // properties.setProperty(KafkaConfig.ControlledShutdownEnableProp, "false") // speed up shutdown
@@ -104,9 +103,12 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     createConsumer(configOverrides = groupOverrideConfig)
   }
 
-  protected def sendRecords(producer: KafkaProducer[Array[Byte], Array[Byte]], numRecords: Int,
-                            tp: TopicPartition,
-                            startingTimestamp: Long = System.currentTimeMillis()): Seq[ProducerRecord[Array[Byte], Array[Byte]]] = {
+  protected def sendRecords(
+      producer: KafkaProducer[Array[Byte], Array[Byte]],
+      numRecords: Int,
+      tp: TopicPartition,
+      startingTimestamp: Long = System.currentTimeMillis()
+  ): Seq[ProducerRecord[Array[Byte], Array[Byte]]] = {
     val records = (0 until numRecords).map { i =>
       val timestamp = startingTimestamp + i.toLong
       val record = new ProducerRecord(tp.topic(), tp.partition(), timestamp, s"key $i".getBytes, s"value $i".getBytes)
@@ -118,14 +120,16 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     records
   }
 
-  protected def consumeAndVerifyRecords(consumer: Consumer[Array[Byte], Array[Byte]],
-                                        numRecords: Int,
-                                        startingOffset: Int,
-                                        startingKeyAndValueIndex: Int = 0,
-                                        startingTimestamp: Long = 0L,
-                                        timestampType: TimestampType = TimestampType.CREATE_TIME,
-                                        tp: TopicPartition = tp,
-                                        maxPollRecords: Int = Int.MaxValue): Unit = {
+  protected def consumeAndVerifyRecords(
+      consumer: Consumer[Array[Byte], Array[Byte]],
+      numRecords: Int,
+      startingOffset: Int,
+      startingKeyAndValueIndex: Int = 0,
+      startingTimestamp: Long = 0L,
+      timestampType: TimestampType = TimestampType.CREATE_TIME,
+      tp: TopicPartition = tp,
+      maxPollRecords: Int = Int.MaxValue
+  ): Unit = {
     val records = consumeRecords(consumer, numRecords, maxPollRecords = maxPollRecords)
     val now = System.currentTimeMillis()
     for (i <- 0 until numRecords) {
@@ -138,8 +142,10 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
         val timestamp = startingTimestamp + i
         assertEquals(timestamp, record.timestamp)
       } else
-        assertTrue(record.timestamp >= startingTimestamp && record.timestamp <= now,
-          s"Got unexpected timestamp ${record.timestamp}. Timestamp should be between [$startingTimestamp, $now}]")
+        assertTrue(
+          record.timestamp >= startingTimestamp && record.timestamp <= now,
+          s"Got unexpected timestamp ${record.timestamp}. Timestamp should be between [$startingTimestamp, $now}]"
+        )
       assertEquals(offset.toLong, record.offset)
       val keyAndValueIndex = startingKeyAndValueIndex + i
       assertEquals(s"key $keyAndValueIndex", new String(record.key))
@@ -150,30 +156,37 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     }
   }
 
-  protected def consumeRecords[K, V](consumer: Consumer[K, V],
-                                     numRecords: Int,
-                                     maxPollRecords: Int = Int.MaxValue): ArrayBuffer[ConsumerRecord[K, V]] = {
+  protected def consumeRecords[K, V](
+      consumer: Consumer[K, V],
+      numRecords: Int,
+      maxPollRecords: Int = Int.MaxValue
+  ): ArrayBuffer[ConsumerRecord[K, V]] = {
     val records = new ArrayBuffer[ConsumerRecord[K, V]]
     def pollAction(polledRecords: ConsumerRecords[K, V]): Boolean = {
       assertTrue(polledRecords.asScala.size <= maxPollRecords)
       records ++= polledRecords.asScala
       records.size >= numRecords
     }
-    TestUtils.pollRecordsUntilTrue(consumer, pollAction, waitTimeMs = 60000,
+    TestUtils.pollRecordsUntilTrue(
+      consumer,
+      pollAction,
+      waitTimeMs = 60000,
       msg = s"Timed out before consuming expected $numRecords records. " +
-        s"The number consumed was ${records.size}.")
+        s"The number consumed was ${records.size}."
+    )
     records
   }
 
-
   /**
-   * Creates topic 'topicName' with 'numPartitions' partitions and produces 'recordsPerPartition'
-   * records to each partition
+   * Creates topic 'topicName' with 'numPartitions' partitions and produces 'recordsPerPartition' records to each
+   * partition
    */
-  protected def createTopicAndSendRecords(producer: KafkaProducer[Array[Byte], Array[Byte]],
-                                          topicName: String,
-                                          numPartitions: Int,
-                                          recordsPerPartition: Int): Set[TopicPartition] = {
+  protected def createTopicAndSendRecords(
+      producer: KafkaProducer[Array[Byte], Array[Byte]],
+      topicName: String,
+      numPartitions: Int,
+      recordsPerPartition: Int
+  ): Set[TopicPartition] = {
     createTopic(topicName, numPartitions, brokerCount)
     var parts = Set[TopicPartition]()
     for (partition <- 0 until numPartitions) {
@@ -184,13 +197,15 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     parts
   }
 
-  protected def sendAndAwaitAsyncCommit[K, V](consumer: Consumer[K, V],
-                                              offsetsOpt: Option[Map[TopicPartition, OffsetAndMetadata]] = None): Unit = {
+  protected def sendAndAwaitAsyncCommit[K, V](
+      consumer: Consumer[K, V],
+      offsetsOpt: Option[Map[TopicPartition, OffsetAndMetadata]] = None
+  ): Unit = {
 
     def sendAsyncCommit(callback: OffsetCommitCallback): Unit = {
       offsetsOpt match {
         case Some(offsets) => consumer.commitAsync(offsets.asJava, callback)
-        case None => consumer.commitAsync(callback)
+        case None          => consumer.commitAsync(callback)
       }
     }
 
@@ -212,31 +227,42 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     val commitCallback = new RetryCommitCallback
 
     sendAsyncCommit(commitCallback)
-    TestUtils.pollUntilTrue(consumer, () => commitCallback.isComplete,
-      "Failed to observe commit callback before timeout", waitTimeMs = 10000)
+    TestUtils.pollUntilTrue(
+      consumer,
+      () => commitCallback.isComplete,
+      "Failed to observe commit callback before timeout",
+      waitTimeMs = 10000
+    )
 
     assertEquals(None, commitCallback.error)
   }
 
   /**
-    * Create 'numOfConsumersToAdd' consumers add then to the consumer group 'consumerGroup', and create corresponding
-    * pollers for these consumers. Wait for partition re-assignment and validate.
-    *
-    * Currently, assignment validation requires that total number of partitions is greater or equal to
-    * number of consumers, so subscriptions.size must be greater or equal the resulting number of consumers in the group
-    *
-    * @param numOfConsumersToAdd number of consumers to create and add to the consumer group
-    * @param consumerGroup current consumer group
-    * @param consumerPollers current consumer pollers
-    * @param topicsToSubscribe topics to which new consumers will subscribe to
-    * @param subscriptions set of all topic partitions
-    */
-  def addConsumersToGroupAndWaitForGroupAssignment(numOfConsumersToAdd: Int,
-                                                   consumerGroup: mutable.Buffer[Consumer[Array[Byte], Array[Byte]]],
-                                                   consumerPollers: mutable.Buffer[ConsumerAssignmentPoller],
-                                                   topicsToSubscribe: List[String],
-                                                   subscriptions: Set[TopicPartition],
-                                                   group: String = group): (mutable.Buffer[Consumer[Array[Byte], Array[Byte]]], mutable.Buffer[ConsumerAssignmentPoller]) = {
+   * Create 'numOfConsumersToAdd' consumers add then to the consumer group 'consumerGroup', and create corresponding
+   * pollers for these consumers. Wait for partition re-assignment and validate.
+   *
+   * Currently, assignment validation requires that total number of partitions is greater or equal to number of
+   * consumers, so subscriptions.size must be greater or equal the resulting number of consumers in the group
+   *
+   * @param numOfConsumersToAdd
+   *   number of consumers to create and add to the consumer group
+   * @param consumerGroup
+   *   current consumer group
+   * @param consumerPollers
+   *   current consumer pollers
+   * @param topicsToSubscribe
+   *   topics to which new consumers will subscribe to
+   * @param subscriptions
+   *   set of all topic partitions
+   */
+  def addConsumersToGroupAndWaitForGroupAssignment(
+      numOfConsumersToAdd: Int,
+      consumerGroup: mutable.Buffer[Consumer[Array[Byte], Array[Byte]]],
+      consumerPollers: mutable.Buffer[ConsumerAssignmentPoller],
+      topicsToSubscribe: List[String],
+      subscriptions: Set[TopicPartition],
+      group: String = group
+  ): (mutable.Buffer[Consumer[Array[Byte], Array[Byte]]], mutable.Buffer[ConsumerAssignmentPoller]) = {
     assertTrue(consumerGroup.size + numOfConsumersToAdd <= subscriptions.size)
     addConsumersToGroup(numOfConsumersToAdd, consumerGroup, consumerPollers, topicsToSubscribe, subscriptions, group)
     // wait until topics get re-assigned and validate assignment
@@ -246,22 +272,28 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
   }
 
   /**
-    * Create 'numOfConsumersToAdd' consumers add then to the consumer group 'consumerGroup', and create corresponding
-    * pollers for these consumers.
-    *
-    *
-    * @param numOfConsumersToAdd number of consumers to create and add to the consumer group
-    * @param consumerGroup current consumer group
-    * @param consumerPollers current consumer pollers
-    * @param topicsToSubscribe topics to which new consumers will subscribe to
-    * @param subscriptions set of all topic partitions
-    */
-  def addConsumersToGroup(numOfConsumersToAdd: Int,
-                          consumerGroup: mutable.Buffer[Consumer[Array[Byte], Array[Byte]]],
-                          consumerPollers: mutable.Buffer[ConsumerAssignmentPoller],
-                          topicsToSubscribe: List[String],
-                          subscriptions: Set[TopicPartition],
-                          group: String = group): (mutable.Buffer[Consumer[Array[Byte], Array[Byte]]], mutable.Buffer[ConsumerAssignmentPoller]) = {
+   * Create 'numOfConsumersToAdd' consumers add then to the consumer group 'consumerGroup', and create corresponding
+   * pollers for these consumers.
+   *
+   * @param numOfConsumersToAdd
+   *   number of consumers to create and add to the consumer group
+   * @param consumerGroup
+   *   current consumer group
+   * @param consumerPollers
+   *   current consumer pollers
+   * @param topicsToSubscribe
+   *   topics to which new consumers will subscribe to
+   * @param subscriptions
+   *   set of all topic partitions
+   */
+  def addConsumersToGroup(
+      numOfConsumersToAdd: Int,
+      consumerGroup: mutable.Buffer[Consumer[Array[Byte], Array[Byte]]],
+      consumerPollers: mutable.Buffer[ConsumerAssignmentPoller],
+      topicsToSubscribe: List[String],
+      subscriptions: Set[TopicPartition],
+      group: String = group
+  ): (mutable.Buffer[Consumer[Array[Byte], Array[Byte]]], mutable.Buffer[ConsumerAssignmentPoller]) = {
     for (_ <- 0 until numOfConsumersToAdd) {
       val consumer = createConsumerWithGroupId(group)
       consumerGroup += consumer
@@ -272,42 +304,56 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
   }
 
   /**
-    * Wait for consumers to get partition assignment and validate it.
-    *
-    * @param consumerPollers consumer pollers corresponding to the consumer group we are testing
-    * @param subscriptions set of all topic partitions
-    * @param msg message to print when waiting for/validating assignment fails
-    */
-  def validateGroupAssignment(consumerPollers: mutable.Buffer[ConsumerAssignmentPoller],
-                              subscriptions: Set[TopicPartition],
-                              msg: Option[String] = None,
-                              waitTime: Long = 10000L,
-                              expectedAssignment: Buffer[Set[TopicPartition]] = Buffer()): Unit = {
+   * Wait for consumers to get partition assignment and validate it.
+   *
+   * @param consumerPollers
+   *   consumer pollers corresponding to the consumer group we are testing
+   * @param subscriptions
+   *   set of all topic partitions
+   * @param msg
+   *   message to print when waiting for/validating assignment fails
+   */
+  def validateGroupAssignment(
+      consumerPollers: mutable.Buffer[ConsumerAssignmentPoller],
+      subscriptions: Set[TopicPartition],
+      msg: Option[String] = None,
+      waitTime: Long = 10000L,
+      expectedAssignment: Buffer[Set[TopicPartition]] = Buffer()
+  ): Unit = {
     val assignments = mutable.Buffer[Set[TopicPartition]]()
-    TestUtils.waitUntilTrue(() => {
-      assignments.clear()
-      consumerPollers.foreach(assignments += _.consumerAssignment())
-      isPartitionAssignmentValid(assignments, subscriptions, expectedAssignment)
-    }, msg.getOrElse(s"Did not get valid assignment for partitions $subscriptions. Instead, got $assignments"), waitTime)
+    TestUtils.waitUntilTrue(
+      () => {
+        assignments.clear()
+        consumerPollers.foreach(assignments += _.consumerAssignment())
+        isPartitionAssignmentValid(assignments, subscriptions, expectedAssignment)
+      },
+      msg.getOrElse(s"Did not get valid assignment for partitions $subscriptions. Instead, got $assignments"),
+      waitTime
+    )
   }
 
   /**
-    * Subscribes consumer 'consumer' to a given list of topics 'topicsToSubscribe', creates
-    * consumer poller and starts polling.
-    * Assumes that the consumer is not subscribed to any topics yet
-    *
-    * @param consumer consumer
-    * @param topicsToSubscribe topics that this consumer will subscribe to
-    * @return consumer poller for the given consumer
-    */
-  def subscribeConsumerAndStartPolling(consumer: Consumer[Array[Byte], Array[Byte]],
-                                       topicsToSubscribe: List[String],
-                                       partitionsToAssign: Set[TopicPartition] = Set.empty[TopicPartition]): ConsumerAssignmentPoller = {
+   * Subscribes consumer 'consumer' to a given list of topics 'topicsToSubscribe', creates consumer poller and starts
+   * polling. Assumes that the consumer is not subscribed to any topics yet
+   *
+   * @param consumer
+   *   consumer
+   * @param topicsToSubscribe
+   *   topics that this consumer will subscribe to
+   * @return
+   *   consumer poller for the given consumer
+   */
+  def subscribeConsumerAndStartPolling(
+      consumer: Consumer[Array[Byte], Array[Byte]],
+      topicsToSubscribe: List[String],
+      partitionsToAssign: Set[TopicPartition] = Set.empty[TopicPartition]
+  ): ConsumerAssignmentPoller = {
     assertEquals(0, consumer.assignment().size)
-    val consumerPoller = if (topicsToSubscribe.nonEmpty)
-      new ConsumerAssignmentPoller(consumer, topicsToSubscribe)
-    else
-      new ConsumerAssignmentPoller(consumer, partitionsToAssign)
+    val consumerPoller =
+      if (topicsToSubscribe.nonEmpty)
+        new ConsumerAssignmentPoller(consumer, topicsToSubscribe)
+      else
+        new ConsumerAssignmentPoller(consumer, partitionsToAssign)
 
     consumerPoller.start()
     consumerPoller
@@ -315,11 +361,17 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
 
   protected def awaitRebalance(consumer: Consumer[_, _], rebalanceListener: TestConsumerReassignmentListener): Unit = {
     val numReassignments = rebalanceListener.callsToAssigned
-    TestUtils.pollUntilTrue(consumer, () => rebalanceListener.callsToAssigned > numReassignments,
-      "Timed out before expected rebalance completed")
+    TestUtils.pollUntilTrue(
+      consumer,
+      () => rebalanceListener.callsToAssigned > numReassignments,
+      "Timed out before expected rebalance completed"
+    )
   }
 
-  protected def ensureNoRebalance(consumer: Consumer[_, _], rebalanceListener: TestConsumerReassignmentListener): Unit = {
+  protected def ensureNoRebalance(
+      consumer: Consumer[_, _],
+      rebalanceListener: TestConsumerReassignmentListener
+  ): Unit = {
     // The best way to verify that the current membership is still active is to commit offsets.
     // This would fail if the group had rebalanced.
     val initialRevokeCalls = rebalanceListener.callsToRevoked
@@ -342,11 +394,12 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     }
   }
 
-  protected class ConsumerAssignmentPoller(consumer: Consumer[Array[Byte], Array[Byte]],
-                                           topicsToSubscribe: List[String],
-                                           partitionsToAssign: Set[TopicPartition],
-                                           userRebalanceListener: ConsumerRebalanceListener)
-    extends ShutdownableThread("daemon-consumer-assignment", false) {
+  protected class ConsumerAssignmentPoller(
+      consumer: Consumer[Array[Byte], Array[Byte]],
+      topicsToSubscribe: List[String],
+      partitionsToAssign: Set[TopicPartition],
+      userRebalanceListener: ConsumerRebalanceListener
+  ) extends ShutdownableThread("daemon-consumer-assignment", false) {
 
     def this(consumer: Consumer[Array[Byte], Array[Byte]], topicsToSubscribe: List[String]) = {
       this(consumer, topicsToSubscribe, Set.empty[TopicPartition], null)
@@ -388,13 +441,12 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     }
 
     /**
-     * Subscribe consumer to a new set of topics.
-     * Since this method most likely be called from a different thread, this function
-     * just "schedules" the subscription change, and actual call to consumer.subscribe is done
-     * in the doWork() method
+     * Subscribe consumer to a new set of topics. Since this method most likely be called from a different thread, this
+     * function just "schedules" the subscription change, and actual call to consumer.subscribe is done in the doWork()
+     * method
      *
-     * This method does not allow to change subscription until doWork processes the previous call
-     * to this method. This is just to avoid race conditions and enough functionality for testing purposes
+     * This method does not allow to change subscription until doWork processes the previous call to this method. This
+     * is just to avoid race conditions and enough functionality for testing purposes
      * @param newTopicsToSubscribe
      */
     def subscribe(newTopicsToSubscribe: List[String]): Unit = {
@@ -434,20 +486,23 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
   }
 
   /**
-   * Check whether partition assignment is valid
-   * Assumes partition assignment is valid iff
-   * 1. Every consumer got assigned at least one partition
-   * 2. Each partition is assigned to only one consumer
-   * 3. Every partition is assigned to one of the consumers
-   * 4. The assignment is the same as expected assignment (if provided)
+   * Check whether partition assignment is valid Assumes partition assignment is valid iff
+   *   1. Every consumer got assigned at least one partition 2. Each partition is assigned to only one consumer 3. Every
+   *      partition is assigned to one of the consumers 4. The assignment is the same as expected assignment (if
+   *      provided)
    *
-   * @param assignments set of consumer assignments; one per each consumer
-   * @param partitions set of partitions that consumers subscribed to
-   * @return true if partition assignment is valid
+   * @param assignments
+   *   set of consumer assignments; one per each consumer
+   * @param partitions
+   *   set of partitions that consumers subscribed to
+   * @return
+   *   true if partition assignment is valid
    */
-  def isPartitionAssignmentValid(assignments: Buffer[Set[TopicPartition]],
-                                 partitions: Set[TopicPartition],
-                                 expectedAssignment: Buffer[Set[TopicPartition]]): Boolean = {
+  def isPartitionAssignmentValid(
+      assignments: Buffer[Set[TopicPartition]],
+      partitions: Set[TopicPartition],
+      expectedAssignment: Buffer[Set[TopicPartition]]
+  ): Boolean = {
     val allNonEmptyAssignments = assignments.forall(assignment => assignment.nonEmpty)
     if (!allNonEmptyAssignments) {
       // at least one consumer got empty assignment
@@ -460,7 +515,9 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     if (totalPartitionsInAssignments != partitions.size) {
       // either same partitions got assigned to more than one consumer or some
       // partitions were not assigned
-        info(s"Total partitions in assignments $totalPartitionsInAssignments is not equal to total partitions $partitions")
+      info(
+        s"Total partitions in assignments $totalPartitionsInAssignments is not equal to total partitions $partitions"
+      )
       return false
     }
 
@@ -479,7 +536,7 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     if (expectedAssignment.nonEmpty) {
       for (assignment <- assignments) {
         if (!expectedAssignment.contains(assignment)) {
-            info(s"Assignment $assignment is not equal to expected assignment $expectedAssignment")
+          info(s"Assignment $assignment is not equal to expected assignment $expectedAssignment")
           return false
         }
       }
