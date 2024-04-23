@@ -360,6 +360,12 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
     apiKey.latestVersion().min(version.maxVersion)
   }
 
+  def findMinApiVersion(apiKey: ApiKeys): Short = {
+    val version = apiVersions.apiVersion(apiKey.id)
+    if (version == null) throw new IllegalArgumentException(s"API key $apiKey is not supported by the broker")
+    apiKey.oldestVersion().max(version.minVersion)
+  }
+
   // Move from: BaseRequestTest.scala
   def connect(socketServer: SocketServer = anySocketServer, listenerName: ListenerName = listenerName): Socket = {
     new Socket("localhost", socketServer.boundPort(listenerName))
