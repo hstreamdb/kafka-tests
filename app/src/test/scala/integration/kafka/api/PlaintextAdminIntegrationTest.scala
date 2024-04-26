@@ -179,7 +179,7 @@
 //     }
    }
 
-   //TODO: 当前不支持获取 metadataCache
+   //TODO：KAFKA_TO_HSTREAM: HStream doesn't support get metadataCache
 //   @Test
 //   def testDescribeTopicsWithIds(): Unit = {
 //     client = Admin.create(createConfig)

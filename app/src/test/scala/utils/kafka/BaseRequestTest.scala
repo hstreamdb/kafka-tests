@@ -15,31 +15,9 @@ package kafka.server
 
 import kafka.api.IntegrationTestHarness
 import kafka.network.SocketServer
-import kafka.utils.NotNothing
-import org.apache.kafka.common.network.ListenerName
-import org.apache.kafka.common.protocol.ApiKeys
-import org.apache.kafka.common.Uuid
-import org.apache.kafka.common.requests.{
-  AbstractRequest,
-  AbstractResponse,
-  ApiVersionsRequest,
-  ApiVersionsResponse,
-  MetadataRequest,
-  MetadataResponse,
-  RequestHeader,
-  ResponseHeader
-}
-import org.apache.kafka.common.utils.Utils
-import org.apache.kafka.metadata.BrokerState
 
-import java.io.{DataInputStream, DataOutputStream}
-import java.net.Socket
-import java.nio.ByteBuffer
 import java.util.Properties
-import scala.annotation.nowarn
 import scala.collection.Seq
-import scala.reflect.ClassTag
-import scala.jdk.CollectionConverters._
 
 abstract class BaseRequestTest extends IntegrationTestHarness {
 

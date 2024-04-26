@@ -3,6 +3,7 @@ package kafka.server
 import org.apache.kafka.common.network.ListenerName
 import org.apache.kafka.metadata.BrokerState
 import org.apache.kafka.common.utils.Time
+
 import java.nio.file.{Files, Path, Paths, StandardOpenOption}
 import kafka.utils.Logging
 import kafka.network.SocketServer
@@ -58,10 +59,11 @@ class KafkaBroker(
           val storeDir = config.testingConfig
             .getOrElse("store_dir", throw new IllegalArgumentException("store_dir is required"))
             .asInstanceOf[String]
-          val extraCommandArgs =
-            (if (config.autoCreateTopicsEnable) "" else "--disable-auto-create-topic")
+            val extraProps = config.hstreamKafkaBrokerProperties
+                .map { case (k, v) => s"--prop $k=$v" }
+                .mkString(" ")
           val dockerCmd =
-            s"docker run -d --network host --name $containerName -v $storeDir:/data/store $image $command $extraCommandArgs"
+            s"docker run -d --network host --name $containerName -v $storeDir:/data/store $image $command $extraProps"
           info(s"=> Start hserver by: $dockerCmd")
           val code = dockerCmd.!
           if (code != 0) {

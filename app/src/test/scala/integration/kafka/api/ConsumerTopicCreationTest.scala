@@ -40,7 +40,11 @@
    @MethodSource(Array("parameters"))
    def testAutoTopicCreation(brokerAutoTopicCreationEnable: JBoolean, consumerAllowAutoCreateTopics: JBoolean): Unit = {
      val testCase = new ConsumerTopicCreationTest.TestCase(brokerAutoTopicCreationEnable, consumerAllowAutoCreateTopics)
-     testCase.setUp(new EmptyTestInfo())
+     val testInfo = new EmptyTestInfo() {
+       override def getDisplayName: String =
+         s"testAutoTopicCreation with args-${brokerAutoTopicCreationEnable.toString},${consumerAllowAutoCreateTopics.toString})"
+     }
+     testCase.setUp(testInfo)
      try testCase.test() finally testCase.tearDown()
    }
 
@@ -57,7 +61,7 @@
      // configure server properties
      // TODO: ENABLE_FOR_HSTREAM
      // this.serverConfig.setProperty(KafkaConfig.ControlledShutdownEnableProp, "false") // speed up shutdown
-     // this.serverConfig.setProperty(KafkaConfig.AutoCreateTopicsEnableProp, brokerAutoTopicCreationEnable.toString)
+      this.serverConfig.setProperty(KafkaConfig.AutoCreateTopicsEnableProp, brokerAutoTopicCreationEnable.toString)
 
      // configure client properties
      this.producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, producerClientId)
@@ -101,9 +105,7 @@
 
    def parameters: java.util.stream.Stream[Arguments] = {
      val data = new java.util.ArrayList[Arguments]()
-     // TODO: ENABLE_FOR_HSTREAM, currently HStream only support set brokerAutoTopicCreationEnable via config file
-     // for (brokerAutoTopicCreationEnable <- Array(JBoolean.TRUE, JBoolean.FALSE))
-     for (brokerAutoTopicCreationEnable <- Array(JBoolean.TRUE))
+     for (brokerAutoTopicCreationEnable <- Array(JBoolean.TRUE, JBoolean.FALSE))
        for (consumerAutoCreateTopicsPolicy <- Array(JBoolean.TRUE, JBoolean.FALSE))
          data.add(Arguments.of(brokerAutoTopicCreationEnable, consumerAutoCreateTopicsPolicy))
      data.stream()

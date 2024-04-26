@@ -130,6 +130,7 @@ public class Common {
     return records;
   }
 
+  @SuppressWarnings("deprecation")
   static <K, V> void pollRecordsUntilTrue(
       Consumer<K, V> consumer,
       Function<ConsumerRecords<K, V>, Boolean> action,
@@ -240,6 +241,7 @@ public class Common {
   /**
    * @param pollMs: consumer.poll(pollMs), not total timeout
    */
+  @SuppressWarnings("deprecation")
   public static <K, V> List<Map<TopicPartition, List<ConsumerRecord<K, V>>>> _pollConcurrently(
       List<Consumer<K, V>> consumers, int minTotalRecords, int pollMs) {
     var totalRecords = new AtomicInteger(0);
@@ -280,6 +282,7 @@ public class Common {
   /**
    * @param pollMs: consumer.poll(pollMs), not total timeout
    */
+  @SuppressWarnings("deprecation")
   public static <K, V>
       Map<TopicPartition, List<ConsumerRecord<K, V>>> pollConcurrentlyWithPollCount(
           List<Consumer<K, V>> consumers, int pollCount, int pollMs) {
