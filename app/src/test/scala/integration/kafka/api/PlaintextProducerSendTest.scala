@@ -13,31 +13,18 @@
 
 package kafka.api
 
-import java.util.Properties
-import java.util.concurrent.{ExecutionException, Future, TimeUnit}
 import kafka.utils.TestUtils
-import org.apache.kafka.clients.producer.{
-  BufferExhaustedException,
-  KafkaProducer,
-  ProducerConfig,
-  ProducerRecord,
-  RecordMetadata
-}
+import org.apache.kafka.clients.producer._
 import org.apache.kafka.common.config.TopicConfig
-import org.apache.kafka.common.errors.{
-  InvalidTimestampException,
-  RecordTooLargeException,
-  SerializationException,
-  TimeoutException
-}
+import org.apache.kafka.common.errors.{InvalidTimestampException, RecordTooLargeException, SerializationException, TimeoutException}
 import org.apache.kafka.common.record.{DefaultRecord, DefaultRecordBatch, Records, TimestampType}
 import org.apache.kafka.common.serialization.ByteArraySerializer
+
+import java.util.Properties
+import java.util.concurrent.{ExecutionException, Future, TimeUnit}
 //import org.apache.kafka.storage.internals.log.LogConfig
 import org.junit.jupiter.api.Assertions._
-import org.junit.jupiter.api.{Disabled, Test}
-import org.junit.jupiter.api.Timeout
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.api.{Disabled, Test, Timeout}
 
 import java.nio.charset.StandardCharsets
 

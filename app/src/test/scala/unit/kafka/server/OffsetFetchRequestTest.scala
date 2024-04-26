@@ -67,7 +67,7 @@
      properties.put(KafkaConfig.BrokerIdProp, brokerId.toString)
      // TODO: ENABLE_FOR_HSTREAM
 //     properties.put(KafkaConfig.OffsetsTopicPartitionsProp, "1")
-//     properties.put(KafkaConfig.OffsetsTopicReplicationFactorProp, "1")
+     properties.put(KafkaConfig.OffsetsTopicReplicationFactorProp, "1")
 //     properties.put(KafkaConfig.TransactionsTopicPartitionsProp, "1")
 //     properties.put(KafkaConfig.TransactionsTopicReplicationFactorProp, "1")
 //     properties.put(KafkaConfig.TransactionsTopicMinISRProp, "1")

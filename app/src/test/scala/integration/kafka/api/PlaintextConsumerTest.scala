@@ -748,7 +748,6 @@ class PlaintextConsumerTest extends BaseConsumerTest {
   }
 
   @Test
-  @Disabled("fix consume reader first")
   def testFetchOutOfRangeOffsetResetConfigEarliest(): Unit = {
     this.consumerConfig.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     // ensure no in-flight fetch request so that the offset can be reset immediately
