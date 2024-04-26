@@ -1,11 +1,11 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- * 
+ * the License. You may obtain a copy of the License at
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -36,8 +36,7 @@ object Json {
   def parseFull(input: String): Option[JsonValue] = tryParseFull(input).toOption
 
   /**
-   * Parse a JSON string into either a generic type T, or a JsonProcessingException in the case of
-   * exception.
+   * Parse a JSON string into either a generic type T, or a JsonProcessingException in the case of exception.
    */
   def parseStringAs[T](input: String)(implicit tag: ClassTag[T]): Either[JsonProcessingException, T] = {
     try Right(mapper.readValue(input, tag.runtimeClass).asInstanceOf[T])
@@ -65,9 +64,11 @@ object Json {
 
   /**
    * Parse a JSON string into a JsonValue if possible. It returns an `Either` where `Left` will be an exception and
-    * `Right` is the `JsonValue`.
-   * @param input a JSON string to parse
-   * @return An `Either` which in case of `Left` means an exception and `Right` is the actual return value.
+   * `Right` is the `JsonValue`.
+   * @param input
+   *   a JSON string to parse
+   * @return
+   *   An `Either` which in case of `Left` means an exception and `Right` is the actual return value.
    */
   def tryParseFull(input: String): Either[JsonProcessingException, JsonValue] =
     if (input == null || input.isEmpty)
@@ -77,16 +78,16 @@ object Json {
       catch { case e: JsonProcessingException => Left(e) }
 
   /**
-   * Encode an object into a JSON string. This method accepts any type supported by Jackson's ObjectMapper in
-   * the default configuration. That is, Java collections are supported, but Scala collections are not (to avoid
-   * a jackson-scala dependency).
+   * Encode an object into a JSON string. This method accepts any type supported by Jackson's ObjectMapper in the
+   * default configuration. That is, Java collections are supported, but Scala collections are not (to avoid a
+   * jackson-scala dependency).
    */
   def encodeAsString(obj: Any): String = mapper.writeValueAsString(obj)
 
   /**
    * Encode an object into a JSON value in bytes. This method accepts any type supported by Jackson's ObjectMapper in
-   * the default configuration. That is, Java collections are supported, but Scala collections are not (to avoid
-   * a jackson-scala dependency).
+   * the default configuration. That is, Java collections are supported, but Scala collections are not (to avoid a
+   * jackson-scala dependency).
    */
   def encodeAsBytes(obj: Any): Array[Byte] = mapper.writeValueAsBytes(obj)
 }

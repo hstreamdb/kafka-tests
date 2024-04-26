@@ -1,10 +1,10 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * the License. You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -14,12 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package kafka.utils
 
 import com.typesafe.scalalogging.Logger
 import org.slf4j.{LoggerFactory, Marker, MarkerFactory}
-
 
 object Log4jControllerRegistration {
   private val logger = Logger(this.getClass.getName)
@@ -53,7 +51,7 @@ trait Logging {
 
   def trace(msg: => String): Unit = logger.trace(msgWithLogIdent(msg))
 
-  def trace(msg: => String, e: => Throwable): Unit = logger.trace(msgWithLogIdent(msg),e)
+  def trace(msg: => String, e: => Throwable): Unit = logger.trace(msgWithLogIdent(msg), e)
 
   def isDebugEnabled: Boolean = logger.underlying.isDebugEnabled
 
@@ -61,19 +59,19 @@ trait Logging {
 
   def debug(msg: => String): Unit = logger.debug(msgWithLogIdent(msg))
 
-  def debug(msg: => String, e: => Throwable): Unit = logger.debug(msgWithLogIdent(msg),e)
+  def debug(msg: => String, e: => Throwable): Unit = logger.debug(msgWithLogIdent(msg), e)
 
   def info(msg: => String): Unit = logger.info(msgWithLogIdent(msg))
 
-  def info(msg: => String,e: => Throwable): Unit = logger.info(msgWithLogIdent(msg),e)
+  def info(msg: => String, e: => Throwable): Unit = logger.info(msgWithLogIdent(msg), e)
 
   def warn(msg: => String): Unit = logger.warn(msgWithLogIdent(msg))
 
-  def warn(msg: => String, e: => Throwable): Unit = logger.warn(msgWithLogIdent(msg),e)
+  def warn(msg: => String, e: => Throwable): Unit = logger.warn(msgWithLogIdent(msg), e)
 
   def error(msg: => String): Unit = logger.error(msgWithLogIdent(msg))
 
-  def error(msg: => String, e: => Throwable): Unit = logger.error(msgWithLogIdent(msg),e)
+  def error(msg: => String, e: => Throwable): Unit = logger.error(msgWithLogIdent(msg), e)
 
   def fatal(msg: => String): Unit =
     logger.error(Logging.FatalMarker, msgWithLogIdent(msg))

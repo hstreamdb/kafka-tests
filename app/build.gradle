@@ -123,6 +123,11 @@ spotless {
     java {
         googleJavaFormat()
     }
+    scala {
+        target '**/*.scala'
+        scalafmt('3.8.0').configFile('../.scalafmt.conf')
+        licenseHeaderFile '../java.header', 'package'
+    }
 
     groovyGradle {
         target '*.gradle'

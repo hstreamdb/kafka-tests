@@ -1,10 +1,10 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * the License. You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package kafka.utils
 
 import java.io._
@@ -27,7 +26,7 @@ import com.typesafe.scalalogging.Logger
 
 import javax.management._
 import scala.collection._
-import scala.collection.{Seq, mutable}
+import scala.collection.{mutable, Seq}
 import kafka.cluster.EndPoint
 import org.apache.kafka.common.network.ListenerName
 import org.apache.kafka.common.security.auth.SecurityProtocol
@@ -43,9 +42,8 @@ import scala.annotation.nowarn
  * the standard library etc.
  *
  * If you are making a new helper function and want to add it to this class please ensure the following:
- * 1. It has documentation
- * 2. It is the most general possible utility, not just the thing you needed in one particular place
- * 3. You have tests for it if it is nontrivial in any way
+ *   1. It has documentation 2. It is the most general possible utility, not just the thing you needed in one particular
+ *      place 3. You have tests for it if it is nontrivial in any way
  */
 object CoreUtils {
   private val logger = Logger(getClass)
@@ -57,29 +55,34 @@ object CoreUtils {
     if (iterable.isEmpty) ifEmpty else iterable.min(cmp)
 
   /**
-    * Do the given action and log any exceptions thrown without rethrowing them.
-    *
-    * @param action The action to execute.
-    * @param logging The logging instance to use for logging the thrown exception.
-    * @param logLevel The log level to use for logging.
-    */
+   * Do the given action and log any exceptions thrown without rethrowing them.
+   *
+   * @param action
+   *   The action to execute.
+   * @param logging
+   *   The logging instance to use for logging the thrown exception.
+   * @param logLevel
+   *   The log level to use for logging.
+   */
   def swallow(action: => Unit, logging: Logging, logLevel: Level = Level.WARN): Unit = {
     try {
       action
     } catch {
-      case e: Throwable => logLevel match {
-        case Level.ERROR => logger.error(e.getMessage, e)
-        case Level.WARN => logger.warn(e.getMessage, e)
-        case Level.INFO => logger.info(e.getMessage, e)
-        case Level.DEBUG => logger.debug(e.getMessage, e)
-        case Level.TRACE => logger.trace(e.getMessage, e)
-      }
+      case e: Throwable =>
+        logLevel match {
+          case Level.ERROR => logger.error(e.getMessage, e)
+          case Level.WARN  => logger.warn(e.getMessage, e)
+          case Level.INFO  => logger.info(e.getMessage, e)
+          case Level.DEBUG => logger.debug(e.getMessage, e)
+          case Level.TRACE => logger.trace(e.getMessage, e)
+        }
     }
   }
 
   /**
    * Recursively delete the list of files/directories and any subfiles (if any exist)
-   * @param files sequence of files to be deleted
+   * @param files
+   *   sequence of files to be deleted
    */
   def delete(files: Seq[String]): Unit = files.foreach(f => Utils.delete(new File(f)))
 
@@ -108,14 +111,15 @@ object CoreUtils {
   }
 
   /**
-   * Register the given mbean with the platform mbean server,
-   * unregistering any mbean that was there before. Note,
-   * this method will not throw an exception if the registration
-   * fails (since there is nothing you can do and it isn't fatal),
-   * instead it just returns false indicating the registration failed.
-   * @param mbean The object to register as an mbean
-   * @param name The name to register this mbean with
-   * @return true if the registration succeeded
+   * Register the given mbean with the platform mbean server, unregistering any mbean that was there before. Note, this
+   * method will not throw an exception if the registration fails (since there is nothing you can do and it isn't
+   * fatal), instead it just returns false indicating the registration failed.
+   * @param mbean
+   *   The object to register as an mbean
+   * @param name
+   *   The name to register this mbean with
+   * @return
+   *   true if the registration succeeded
    */
   def registerMBean(mbean: Object, name: String): Boolean = {
     try {
@@ -136,7 +140,8 @@ object CoreUtils {
 
   /**
    * Unregister the mbean with the given name, if there is one registered
-   * @param name The mbean name to unregister
+   * @param name
+   *   The mbean name to unregister
    */
   def unregisterMBean(name: String): Unit = {
     val mbs = ManagementFactory.getPlatformMBeanServer()
@@ -148,36 +153,37 @@ object CoreUtils {
   }
 
   /**
-   * Read some bytes into the provided buffer, and return the number of bytes read. If the
-   * channel has been closed or we get -1 on the read for any reason, throw an EOFException
+   * Read some bytes into the provided buffer, and return the number of bytes read. If the channel has been closed or we
+   * get -1 on the read for any reason, throw an EOFException
    */
   def read(channel: ReadableByteChannel, buffer: ByteBuffer): Int = {
     channel.read(buffer) match {
       case -1 => throw new EOFException("Received -1 when reading from channel, socket has likely been closed.")
-      case n => n
+      case n  => n
     }
   }
 
   /**
-   * This method gets comma separated values which contains key,value pairs and returns a map of
-   * key value pairs. the format of allCSVal is key1:val1, key2:val2 ....
-   * Also supports strings with multiple ":" such as IpV6 addresses, taking the last occurrence
-   * of the ":" in the pair as the split, eg a:b:c:val1, d:e:f:val2 => a:b:c -> val1, d:e:f -> val2
+   * This method gets comma separated values which contains key,value pairs and returns a map of key value pairs. the
+   * format of allCSVal is key1:val1, key2:val2 .... Also supports strings with multiple ":" such as IpV6 addresses,
+   * taking the last occurrence of the ":" in the pair as the split, eg a:b:c:val1, d:e:f:val2 => a:b:c -> val1, d:e:f
+   * -> val2
    */
   def parseCsvMap(str: String): Map[String, String] = {
     val map = new mutable.HashMap[String, String]
     if ("".equals(str))
       return map
-    val keyVals = str.split("\\s*,\\s*").map(s => {
-      val lio = s.lastIndexOf(":")
-      (s.substring(0,lio).trim, s.substring(lio + 1).trim)
-    })
+    val keyVals = str
+      .split("\\s*,\\s*")
+      .map(s => {
+        val lio = s.lastIndexOf(":")
+        (s.substring(0, lio).trim, s.substring(lio + 1).trim)
+      })
     keyVals.toMap
   }
 
   /**
-   * Parse a comma separated string into a sequence of strings.
-   * Whitespace surrounding the comma will be removed.
+   * Parse a comma separated string into a sequence of strings. Whitespace surrounding the comma will be removed.
    */
   def parseCsvList(csvList: String): Seq[String] = {
     if (csvList == null || csvList.isEmpty)
@@ -197,8 +203,10 @@ object CoreUtils {
 
   /**
    * Create a circular (looping) iterator over a collection.
-   * @param coll An iterable over the underlying collection.
-   * @return A circular iterator over the collection.
+   * @param coll
+   *   An iterable over the underlying collection.
+   * @return
+   *   A circular iterator over the collection.
    */
   def circularIterator[T](coll: Iterable[T]) =
     for (_ <- Iterator.continually(1); t <- coll) yield t
@@ -224,35 +232,49 @@ object CoreUtils {
    */
   def duplicates[T](s: Iterable[T]): Iterable[T] = {
     s.groupBy(identity)
-      .map { case (k, l) => (k, l.size)}
+      .map { case (k, l) => (k, l.size) }
       .filter { case (_, l) => l > 1 }
       .keys
   }
 
-  def listenerListToEndPoints(listeners: String, securityProtocolMap: Map[ListenerName, SecurityProtocol]): Seq[EndPoint] = {
+  def listenerListToEndPoints(
+      listeners: String,
+      securityProtocolMap: Map[ListenerName, SecurityProtocol]
+  ): Seq[EndPoint] = {
     listenerListToEndPoints(listeners, securityProtocolMap, true)
   }
 
-  def listenerListToEndPoints(listeners: String, securityProtocolMap: Map[ListenerName, SecurityProtocol], requireDistinctPorts: Boolean): Seq[EndPoint] = {
+  def listenerListToEndPoints(
+      listeners: String,
+      securityProtocolMap: Map[ListenerName, SecurityProtocol],
+      requireDistinctPorts: Boolean
+  ): Seq[EndPoint] = {
     def validate(endPoints: Seq[EndPoint]): Unit = {
       // filter port 0 for unit tests
       val portsExcludingZero = endPoints.map(_.port).filter(_ != 0)
       val distinctListenerNames = endPoints.map(_.listenerName).distinct
 
-      require(distinctListenerNames.size == endPoints.size, s"Each listener must have a different name, listeners: $listeners")
+      require(
+        distinctListenerNames.size == endPoints.size,
+        s"Each listener must have a different name, listeners: $listeners"
+      )
       if (requireDistinctPorts) {
         val distinctPorts = portsExcludingZero.distinct
-        require(distinctPorts.size == portsExcludingZero.size, s"Each listener must have a different port, listeners: $listeners")
+        require(
+          distinctPorts.size == portsExcludingZero.size,
+          s"Each listener must have a different port, listeners: $listeners"
+        )
       }
     }
 
-    val endPoints = try {
-      val listenerList = parseCsvList(listeners)
-      listenerList.map(EndPoint.createEndPoint(_, Some(securityProtocolMap)))
-    } catch {
-      case e: Exception =>
-        throw new IllegalArgumentException(s"Error creating broker listeners from '$listeners': ${e.getMessage}", e)
-    }
+    val endPoints =
+      try {
+        val listenerList = parseCsvList(listeners)
+        listenerList.map(EndPoint.createEndPoint(_, Some(securityProtocolMap)))
+      } catch {
+        case e: Exception =>
+          throw new IllegalArgumentException(s"Error creating broker listeners from '$listeners': ${e.getMessage}", e)
+      }
     validate(endPoints)
     endPoints
   }
@@ -281,10 +303,9 @@ object CoreUtils {
   }
 
   /**
-   * Atomic `getOrElseUpdate` for concurrent maps. This is optimized for the case where
-   * keys often exist in the map, avoiding the need to create a new value. `createValue`
-   * may be invoked more than once if multiple threads attempt to insert a key at the same
-   * time, but the same inserted value will be returned to all threads.
+   * Atomic `getOrElseUpdate` for concurrent maps. This is optimized for the case where keys often exist in the map,
+   * avoiding the need to create a new value. `createValue` may be invoked more than once if multiple threads attempt to
+   * insert a key at the same time, but the same inserted value will be returned to all threads.
    *
    * In Scala 2.12, `ConcurrentMap.getOrElse` has the same behaviour as this method, but JConcurrentMapWrapper that
    * wraps Java maps does not.

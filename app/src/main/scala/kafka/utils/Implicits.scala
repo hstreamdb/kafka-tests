@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package kafka.utils
 
 import java.util
@@ -24,16 +23,15 @@ import scala.annotation.nowarn
 import scala.jdk.CollectionConverters._
 
 /**
-  * In order to have these implicits in scope, add the following import:
-  *
-  * `import kafka.utils.Implicits._`
-  */
+ * In order to have these implicits in scope, add the following import:
+ *
+ * `import kafka.utils.Implicits._`
+ */
 object Implicits {
 
   /**
-   * The java.util.Properties.putAll override introduced in Java 9 is seen as an overload by the
-   * Scala compiler causing ambiguity errors in some cases. The `++=` methods introduced via
-   * implicits provide a concise alternative.
+   * The java.util.Properties.putAll override introduced in Java 9 is seen as an overload by the Scala compiler causing
+   * ambiguity errors in some cases. The `++=` methods introduced via implicits provide a concise alternative.
    *
    * See https://github.com/scala/bug/issues/10418 for more details.
    */
@@ -48,12 +46,11 @@ object Implicits {
   }
 
   /**
-   * Exposes `forKeyValue` which maps to `foreachEntry` in Scala 2.13 and `foreach` in Scala 2.12
-   * (with the help of scala.collection.compat). `foreachEntry` avoids the tuple allocation and
-   * is more efficient.
+   * Exposes `forKeyValue` which maps to `foreachEntry` in Scala 2.13 and `foreach` in Scala 2.12 (with the help of
+   * scala.collection.compat). `foreachEntry` avoids the tuple allocation and is more efficient.
    *
-   * This was not named `foreachEntry` to avoid `unused import` warnings in Scala 2.13 (the implicit
-   * would not be triggered in Scala 2.13 since `Map.foreachEntry` would have precedence).
+   * This was not named `foreachEntry` to avoid `unused import` warnings in Scala 2.13 (the implicit would not be
+   * triggered in Scala 2.13 since `Map.foreachEntry` would have precedence).
    */
   @nowarn("cat=unused-imports")
   implicit class MapExtensionMethods[K, V](private val self: scala.collection.Map[K, V]) extends AnyVal {

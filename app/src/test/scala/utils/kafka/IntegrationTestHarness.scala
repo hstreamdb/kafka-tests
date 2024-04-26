@@ -1,10 +1,10 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * the License. You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-// From: scala/integration/kafka/api/IntegrationTestHarness.scala
 package kafka.api
 
 import java.time.Duration
@@ -127,8 +125,7 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
     superuserClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers())
   }
 
-  def doSetup(testInfo: TestInfo,
-              createOffsetsTopic: Boolean): Unit = {
+  def doSetup(testInfo: TestInfo, createOffsetsTopic: Boolean): Unit = {
     this.testInfo = testInfo
     // Generate client security properties before starting the brokers in case certs are needed
     producerConfig ++= clientSecurityProps("producer")
@@ -160,17 +157,25 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
   }
 
   def clientSecurityProps(certAlias: String): Properties = {
-    TestUtils.securityConfigs(Mode.CLIENT, securityProtocol, trustStoreFile, certAlias, TestUtils.SslCertificateCn,
-      clientSaslProperties)
+    TestUtils.securityConfigs(
+      Mode.CLIENT,
+      securityProtocol,
+      trustStoreFile,
+      certAlias,
+      TestUtils.SslCertificateCn,
+      clientSaslProperties
+    )
   }
 
   def superuserSecurityProps(certAlias: String): Properties = {
     clientSecurityProps(certAlias)
   }
 
-  def createProducer[K, V](keySerializer: Serializer[K] = new ByteArraySerializer,
-                           valueSerializer: Serializer[V] = new ByteArraySerializer,
-                           configOverrides: Properties = new Properties): KafkaProducer[K, V] = {
+  def createProducer[K, V](
+      keySerializer: Serializer[K] = new ByteArraySerializer,
+      valueSerializer: Serializer[V] = new ByteArraySerializer,
+      configOverrides: Properties = new Properties
+  ): KafkaProducer[K, V] = {
     val props = new Properties
     props ++= producerConfig
     props ++= configOverrides
@@ -179,10 +184,12 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
     producer
   }
 
-  def createAsyncConsumer[K, V](keyDeserializer: Deserializer[K] = new ByteArrayDeserializer,
-                                valueDeserializer: Deserializer[V] = new ByteArrayDeserializer,
-                                configOverrides: Properties = new Properties,
-                                configsToRemove: List[String] = List()): PrototypeAsyncConsumer[K, V] = {
+  def createAsyncConsumer[K, V](
+      keyDeserializer: Deserializer[K] = new ByteArrayDeserializer,
+      valueDeserializer: Deserializer[V] = new ByteArrayDeserializer,
+      configOverrides: Properties = new Properties,
+      configsToRemove: List[String] = List()
+  ): PrototypeAsyncConsumer[K, V] = {
     val props = new Properties
     props ++= consumerConfig
     props ++= configOverrides
@@ -192,10 +199,12 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
     consumer
   }
 
-  def createConsumer[K, V](keyDeserializer: Deserializer[K] = new ByteArrayDeserializer,
-                           valueDeserializer: Deserializer[V] = new ByteArrayDeserializer,
-                           configOverrides: Properties = new Properties,
-                           configsToRemove: List[String] = List()): KafkaConsumer[K, V] = {
+  def createConsumer[K, V](
+      keyDeserializer: Deserializer[K] = new ByteArrayDeserializer,
+      valueDeserializer: Deserializer[V] = new ByteArrayDeserializer,
+      configOverrides: Properties = new Properties,
+      configsToRemove: List[String] = List()
+  ): KafkaConsumer[K, V] = {
     val props = new Properties
     props ++= consumerConfig
     props ++= configOverrides
@@ -206,8 +215,8 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
   }
 
   def createAdminClient(
-    listenerName: ListenerName = listenerName,
-    configOverrides: Properties = new Properties
+      listenerName: ListenerName = listenerName,
+      configOverrides: Properties = new Properties
   ): Admin = {
     val props = new Properties
     props ++= adminClientConfig
@@ -218,8 +227,8 @@ abstract class IntegrationTestHarness extends KafkaServerTestHarness {
   }
 
   def createSuperuserAdminClient(
-    listenerName: ListenerName = listenerName,
-    configOverrides: Properties = new Properties
+      listenerName: ListenerName = listenerName,
+      configOverrides: Properties = new Properties
   ): Admin = {
     val props = new Properties
     props ++= superuserClientConfig

@@ -67,7 +67,7 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
   override protected def brokerPropertyOverrides(properties: Properties): Unit = {
     // TODO HSTREAM
     // properties.setProperty(KafkaConfig.ControlledShutdownEnableProp, "false") // speed up shutdown
-     properties.setProperty(KafkaConfig.OffsetsTopicReplicationFactorProp, "3") // don't want to lose offset
+    properties.setProperty(KafkaConfig.OffsetsTopicReplicationFactorProp, "3") // don't want to lose offset
     // properties.setProperty(KafkaConfig.OffsetsTopicPartitionsProp, "1")
     // properties.setProperty(KafkaConfig.GroupMinSessionTimeoutMsProp, "100") // set small enough session timeout
     // properties.setProperty(KafkaConfig.GroupMaxSessionTimeoutMsProp, groupMaxSessionTimeoutMs.toString)

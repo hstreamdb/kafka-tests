@@ -1,17 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
- * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
-// From: scala/unit/kafka/utils/TestUtils.scala
 package kafka.utils
 
 import java.io._
@@ -144,9 +146,9 @@ object TestUtils extends Logging {
 
   val currentTestTimeMillis = System.currentTimeMillis()
 
-   /* Incorrect broker port which can used by kafka clients in tests. This port should not be used
+  /* Incorrect broker port which can used by kafka clients in tests. This port should not be used
     by any other service and hence we use a reserved port. */
-   val IncorrectBrokerPort = 225
+  val IncorrectBrokerPort = 225
 
 //   /** Port to use for unit tests that mock/don't require a real ZK server. */
 //   val MockZkPort = 1
@@ -2391,14 +2393,25 @@ object TestUtils extends Logging {
 //     (out.toString, err.toString)
 //   }
 //
-   def assertFutureExceptionTypeEquals(future: KafkaFuture[_], clazz: Class[_ <: Throwable],
-                                       expectedErrorMessage: Option[String] = None): Unit = {
-     val cause = assertThrows(classOf[ExecutionException], () => future.get()).getCause
-     assertTrue(clazz.isInstance(cause), "Expected an exception of type " + clazz.getName + "; got type " +
-       cause.getClass.getName)
-     expectedErrorMessage.foreach(message => assertTrue(cause.getMessage.contains(message), s"Received error message : ${cause.getMessage}" +
-       s" does not contain expected error message : $message"))
-   }
+  def assertFutureExceptionTypeEquals(
+      future: KafkaFuture[_],
+      clazz: Class[_ <: Throwable],
+      expectedErrorMessage: Option[String] = None
+  ): Unit = {
+    val cause = assertThrows(classOf[ExecutionException], () => future.get()).getCause
+    assertTrue(
+      clazz.isInstance(cause),
+      "Expected an exception of type " + clazz.getName + "; got type " +
+        cause.getClass.getName
+    )
+    expectedErrorMessage.foreach(message =>
+      assertTrue(
+        cause.getMessage.contains(message),
+        s"Received error message : ${cause.getMessage}" +
+          s" does not contain expected error message : $message"
+      )
+    )
+  }
 //
 //   def assertBadConfigContainingMessage(props: Properties, expectedExceptionContainsText: String): Unit = {
 //     try {

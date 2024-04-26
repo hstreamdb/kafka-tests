@@ -1,12 +1,12 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * the License. You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package kafka.cluster
 
-import org.apache.kafka.common.{KafkaException, Endpoint => JEndpoint}
+import org.apache.kafka.common.{Endpoint => JEndpoint, KafkaException}
 import org.apache.kafka.common.network.ListenerName
 import org.apache.kafka.common.security.auth.SecurityProtocol
 import org.apache.kafka.common.utils.Utils
@@ -36,17 +35,22 @@ object EndPoint {
    * Create EndPoint object from `connectionString` and optional `securityProtocolMap`. If the latter is not provided,
    * we fallback to the default behaviour where listener names are the same as security protocols.
    *
-   * @param connectionString the format is listener_name://host:port or listener_name://[ipv6 host]:port
-   *                         for example: PLAINTEXT://myhost:9092, CLIENT://myhost:9092 or REPLICATION://[::1]:9092
-   *                         Host can be empty (PLAINTEXT://:9092) in which case we'll bind to default interface
-   *                         Negative ports are also accepted, since they are used in some unit tests
+   * @param connectionString
+   *   the format is listener_name://host:port or listener_name://[ipv6 host]:port for example: PLAINTEXT://myhost:9092,
+   *   CLIENT://myhost:9092 or REPLICATION://[::1]:9092 Host can be empty (PLAINTEXT://:9092) in which case we'll bind
+   *   to default interface Negative ports are also accepted, since they are used in some unit tests
    */
-  def createEndPoint(connectionString: String, securityProtocolMap: Option[Map[ListenerName, SecurityProtocol]]): EndPoint = {
+  def createEndPoint(
+      connectionString: String,
+      securityProtocolMap: Option[Map[ListenerName, SecurityProtocol]]
+  ): EndPoint = {
     val protocolMap = securityProtocolMap.getOrElse(DefaultSecurityProtocolMap)
 
     def securityProtocol(listenerName: ListenerName): SecurityProtocol =
-      protocolMap.getOrElse(listenerName,
-        throw new IllegalArgumentException(s"No security protocol defined for listener ${listenerName.value}"))
+      protocolMap.getOrElse(
+        listenerName,
+        throw new IllegalArgumentException(s"No security protocol defined for listener ${listenerName.value}")
+      )
 
     connectionString match {
       case uriParseExp(listenerNameString, "", port) =>
@@ -67,10 +71,12 @@ object EndPoint {
   }
 
   def fromJava(endpoint: JEndpoint): EndPoint =
-    new EndPoint(endpoint.host(),
+    new EndPoint(
+      endpoint.host(),
       endpoint.port(),
       new ListenerName(endpoint.listenerName().get()),
-      endpoint.securityProtocol())
+      endpoint.securityProtocol()
+    )
 }
 
 /**
@@ -80,7 +86,7 @@ case class EndPoint(host: String, port: Int, listenerName: ListenerName, securit
   def connectionString: String = {
     val hostport =
       if (host == null)
-        ":"+port
+        ":" + port
       else
         Utils.formatAddress(host, port)
     listenerName.value + "://" + hostport

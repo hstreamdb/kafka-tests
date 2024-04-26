@@ -1,10 +1,10 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
+ * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * the License. You may obtain a copy of the License at
  *
  *    http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package kafka.utils.json
 
 import scala.collection.{Map, Seq}
@@ -37,19 +36,20 @@ trait DecodeJson[T] {
   /**
    * Decode the JSON node provided into an instance of `T`.
    *
-   * @throws JsonMappingException if `node` cannot be decoded into `T`.
+   * @throws JsonMappingException
+   *   if `node` cannot be decoded into `T`.
    */
   def decode(node: JsonNode): T =
     decodeEither(node) match {
       case Right(x) => x
-      case Left(x) => throw new JsonMappingException(null, x)
+      case Left(x)  => throw new JsonMappingException(null, x)
     }
 
 }
 
 /**
- * Contains `DecodeJson` type class instances. That is, we need one instance for each type that we want to be able to
- * to parse into. It is a compiler error to try to parse into a type for which there is no instance.
+ * Contains `DecodeJson` type class instances. That is, we need one instance for each type that we want to be able to to
+ * parse into. It is a compiler error to try to parse into a type for which there is no instance.
  */
 object DecodeJson {
 
@@ -85,24 +85,32 @@ object DecodeJson {
     else decodeJson.decodeEither(node).map(Some(_))
   }
 
-  implicit def decodeSeq[E, S[+T] <: Seq[E]](implicit decodeJson: DecodeJson[E], factory: Factory[E, S[E]]): DecodeJson[S[E]] = (node: JsonNode) => {
+  implicit def decodeSeq[E, S[+T] <: Seq[E]](implicit
+      decodeJson: DecodeJson[E],
+      factory: Factory[E, S[E]]
+  ): DecodeJson[S[E]] = (node: JsonNode) => {
     if (node.isArray)
       decodeIterator(node.elements.asScala)(decodeJson.decodeEither)
     else Left(s"Expected JSON array, received $node")
   }
 
-  implicit def decodeMap[V, M[K, +V] <: Map[K, V]](implicit decodeJson: DecodeJson[V], factory: Factory[(String, V), M[String, V]]): DecodeJson[M[String, V]] = (node: JsonNode) => {
+  implicit def decodeMap[V, M[K, +V] <: Map[K, V]](implicit
+      decodeJson: DecodeJson[V],
+      factory: Factory[(String, V), M[String, V]]
+  ): DecodeJson[M[String, V]] = (node: JsonNode) => {
     if (node.isObject)
       decodeIterator(node.fields.asScala)(e => decodeJson.decodeEither(e.getValue).map(v => (e.getKey, v)))
     else Left(s"Expected JSON object, received $node")
   }
 
-  private def decodeIterator[S, T, C](it: Iterator[S])(f: S => Either[String, T])(implicit factory: Factory[T, C]): Either[String, C] = {
+  private def decodeIterator[S, T, C](
+      it: Iterator[S]
+  )(f: S => Either[String, T])(implicit factory: Factory[T, C]): Either[String, C] = {
     val result = factory.newBuilder
     while (it.hasNext) {
       f(it.next()) match {
         case Right(x) => result += x
-        case Left(x) => return Left(x)
+        case Left(x)  => return Left(x)
       }
     }
     Right(result.result())

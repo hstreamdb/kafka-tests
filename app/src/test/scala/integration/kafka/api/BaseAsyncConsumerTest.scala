@@ -19,7 +19,6 @@ package kafka.api
 import kafka.utils.TestUtils.waitUntilTrue
 import org.junit.jupiter.api.Test
 
-
 class BaseAsyncConsumerTest extends AbstractConsumerTest {
   @Test
   def testCommitAsync(): Unit = {
@@ -30,9 +29,13 @@ class BaseAsyncConsumerTest extends AbstractConsumerTest {
     val cb = new CountConsumerCommitCallback
     sendRecords(producer, numRecords, tp, startingTimestamp = startingTimestamp)
     consumer.commitAsync(cb)
-    waitUntilTrue(() => {
-      cb.successCount == 1
-    }, "wait until commit is completed successfully", 5000)
+    waitUntilTrue(
+      () => {
+        cb.successCount == 1
+      },
+      "wait until commit is completed successfully",
+      5000
+    )
   }
 
   @Test

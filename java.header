@@ -14,13 +14,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package kafka.utils.json
-
-import scala.collection.Iterator
-import scala.jdk.CollectionConverters._
-
-import com.fasterxml.jackson.databind.node.ArrayNode
-
-class JsonArray private[json] (protected val node: ArrayNode) extends JsonValue {
-  def iterator: Iterator[JsonValue] = node.elements.asScala.map(JsonValue(_))
-}
