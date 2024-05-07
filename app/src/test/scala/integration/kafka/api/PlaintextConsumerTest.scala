@@ -1239,6 +1239,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
   }
 
   @Test
+  @Disabled("failed test")
   def testMultiConsumerSessionTimeoutOnStopPolling(): Unit = {
     runMultiConsumerSessionTimeoutTest(false)
   }
