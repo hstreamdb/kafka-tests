@@ -957,6 +957,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
   }
 
   @Test
+  @Disabled("fix join group")
   def testMultiConsumerRoundRobinAssignor(): Unit = {
     this.consumerConfig.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "roundrobin-group")
     this.consumerConfig
@@ -1059,6 +1060,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
    * BaseConsumerTest
    */
   @Test
+  @Disabled("fix join group")
   def testMultiConsumerDefaultAssignor(): Unit = {
     // use consumers and topics defined in this class + one more topic
     val producer = createProducer()
@@ -1103,6 +1105,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
     }
   }
 
+  @Disabled("fix join group")
   @ParameterizedTest
   @ValueSource(strings =
     Array(

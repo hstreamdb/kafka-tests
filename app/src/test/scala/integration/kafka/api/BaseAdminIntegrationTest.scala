@@ -197,23 +197,23 @@
      super.modifyConfigs(configs)
      // For testCreateTopicsReturnsConfigs, set some static broker configurations so that we can
      // verify that they show up in the "configs" output of CreateTopics.
-//     if (testInfo.getTestMethod.toString.contains("testCreateTopicsReturnsConfigs")) {
+     if (testInfo.getTestMethod.toString.contains("testCreateTopicsReturnsConfigs")) {
 //       configs.foreach(config => {
 //         config.setProperty(KafkaConfig.LogRollTimeHoursProp, "2")
 //         config.setProperty(KafkaConfig.LogRetentionTimeMinutesProp, "240")
 //         config.setProperty(KafkaConfig.LogRollTimeJitterMillisProp, "123")
 //       })
-//     }
-//     configs.foreach { config =>
+     }
+     configs.foreach { config =>
 //       config.setProperty(KafkaConfig.DeleteTopicEnableProp, "true")
-//       config.setProperty(KafkaConfig.GroupInitialRebalanceDelayMsProp, "0")
+       config.setProperty(KafkaConfig.GroupInitialRebalanceDelayMsProp, "0")
 //       config.setProperty(KafkaConfig.AutoLeaderRebalanceEnableProp, "false")
 //       config.setProperty(KafkaConfig.ControlledShutdownEnableProp, "false")
 //       // We set this in order to test that we don't expose sensitive data via describe configs. This will already be
 //       // set for subclasses with security enabled and we don't want to overwrite it.
 //       if (!config.containsKey(KafkaConfig.SslTruststorePasswordProp))
 //         config.setProperty(KafkaConfig.SslTruststorePasswordProp, "some.invalid.pass")
-//     }
+     }
    }
 //
 //   override def kraftControllerConfigs(): Seq[Properties] = {
