@@ -1239,7 +1239,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
   }
 
   @Test
-  @Disabled("failed test")
+  @Disabled("test failed in ci")
   def testMultiConsumerSessionTimeoutOnStopPolling(): Unit = {
     runMultiConsumerSessionTimeoutTest(false)
   }
@@ -1868,33 +1868,35 @@ class PlaintextConsumerTest extends BaseConsumerTest {
 
     // first subscribe consumers that are defined in this class
     val consumerPollers = Buffer[ConsumerAssignmentPoller]()
-    consumerPollers += subscribeConsumerAndStartPolling(createConsumer(), List(topic, topic1))
-    consumerPollers += subscribeConsumerAndStartPolling(createConsumer(), List(topic, topic1))
+    try {
+      consumerPollers += subscribeConsumerAndStartPolling(createConsumer(), List(topic, topic1))
+      consumerPollers += subscribeConsumerAndStartPolling(createConsumer(), List(topic, topic1))
 
-    // create one more consumer and add it to the group; we will timeout this consumer
-    val timeoutConsumer = createConsumer()
-    val timeoutPoller = subscribeConsumerAndStartPolling(timeoutConsumer, List(topic, topic1))
-    consumerPollers += timeoutPoller
+      // create one more consumer and add it to the group; we will timeout this consumer
+      val timeoutConsumer = createConsumer()
+      val timeoutPoller = subscribeConsumerAndStartPolling(timeoutConsumer, List(topic, topic1))
+      consumerPollers += timeoutPoller
 
-    // validate the initial assignment
-    validateGroupAssignment(consumerPollers, subscriptions)
+      // validate the initial assignment
+      validateGroupAssignment(consumerPollers, subscriptions)
 
-    // stop polling and close one of the consumers, should trigger partition re-assignment among alive consumers
-    timeoutPoller.shutdown()
-    consumerPollers -= timeoutPoller
-    if (closeConsumer)
-      timeoutConsumer.close()
+      // stop polling and close one of the consumers, should trigger partition re-assignment among alive consumers
+      timeoutPoller.shutdown()
+      consumerPollers -= timeoutPoller
+      if (closeConsumer)
+        timeoutConsumer.close()
 
-    validateGroupAssignment(
-      consumerPollers,
-      subscriptions,
-      Some(s"Did not get valid assignment for partitions ${subscriptions.asJava} after one consumer left"),
-      3 * groupMaxSessionTimeoutMs
-    )
-
-    // done with pollers and consumers
-    for (poller <- consumerPollers)
-      poller.shutdown()
+      validateGroupAssignment(
+        consumerPollers,
+        subscriptions,
+        Some(s"Did not get valid assignment for partitions ${subscriptions.asJava} after one consumer left"),
+        3 * groupMaxSessionTimeoutMs
+      )
+    } finally {
+      // done with pollers and consumers
+      for (poller <- consumerPollers)
+        poller.shutdown()
+    }
   }
 
   /**

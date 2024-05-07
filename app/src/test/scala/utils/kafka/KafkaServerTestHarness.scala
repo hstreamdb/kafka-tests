@@ -35,7 +35,6 @@ import scala.annotation.nowarn
 import scala.collection.{Seq, mutable}
 import scala.jdk.CollectionConverters._
 import scala.reflect.ClassTag
-import scala.sys.process._
 // import org.apache.kafka.controller.ControllerRequestContextUtil.ANONYMOUS_CONTEXT
 
 /**
@@ -119,16 +118,6 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 
     // default implementation is a no-op, it is overridden by subclasses if required
     configureSecurityBeforeServersStart(testInfo)
-
-    if (configs.head.testingConfig.nonEmpty) {
-      configs.head.testingConfig.get("container_remove") match {
-        case Some(value) =>
-          if (value.asInstanceOf[Boolean]) {
-            s"docker ps -a | grep kafka-tests | cut --delimiter=\" \" --fields=1 | xargs docker rm -f".!
-          }
-        case _ =>
-      }
-    }
 
     createBrokers(startup = true)
 
