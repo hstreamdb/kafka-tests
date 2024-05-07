@@ -18,7 +18,7 @@ import org.apache.kafka.common.config.{AbstractConfig, ConfigDef, ConfigExceptio
 import org.apache.kafka.common.security.auth.SecurityProtocol
 import org.apache.kafka.common.network.ListenerName
 
-import scala.collection.{Map, Seq, immutable, mutable}
+import scala.collection.{Map, Seq, mutable}
 import scala.annotation.nowarn
 import kafka.cluster.EndPoint
 import kafka.utils.{CoreUtils, Logging}
@@ -46,6 +46,7 @@ object Defaults {
   val DefaultReplicationFactor = 1
   // KAFKA_TO_HSTREAM: kafka default value is 3
   val DefaultOffsetsTopicReplicationFactor: Short = 1
+  val GroupInitialRebalanceDelayMs = 3000
 
   // TODO: KAFKA_ORIGINAL
   // val Listeners = "PLAINTEXT://:9092"
@@ -68,6 +69,7 @@ object KafkaConfig {
   val NumPartitionsProp = "num.partitions"
   val DefaultReplicationFactorProp = "default.replication.factor"
   val OffsetsTopicReplicationFactorProp = "offsets.topic.replication.factor"
+  val GroupInitialRebalanceDelayMsProp = "group.initial.rebalance.delay.ms"
 
   // TODO: KAFKA_ORIGINAL
   // val ListenersProp = "listeners"
@@ -111,6 +113,7 @@ object KafkaConfig {
         "$DefaultReplicationFactorDoc"
       )
       .define(OffsetsTopicReplicationFactorProp, SHORT, Defaults.DefaultOffsetsTopicReplicationFactor, atLeast(1), HIGH, "$OffsetsTopicReplicationFactorDoc")
+      .define(GroupInitialRebalanceDelayMsProp, INT, Defaults.GroupInitialRebalanceDelayMs, MEDIUM, "$GroupInitialRebalanceDelayMsDoc")
       .define(SaslKerberosServiceNameProp, STRING, null, MEDIUM, "$SaslKerberosServiceNameDoc")
 
     // TODO: KAFKA_ORIGINAL
@@ -190,12 +193,18 @@ class KafkaConfig private (
   val defaultReplicationFactor: Int = getInt(KafkaConfig.DefaultReplicationFactorProp)
 
   def hstreamKafkaBrokerProperties: Map[Any, Any] = {
-    val props = new mutable.HashMap[Any, Any]()
-    props.put(KafkaConfig.NumPartitionsProp, getInt(KafkaConfig.NumPartitionsProp))
-    props.put(KafkaConfig.DefaultReplicationFactorProp, getInt(KafkaConfig.DefaultReplicationFactorProp))
-    props.put(KafkaConfig.AutoCreateTopicsEnableProp, getBoolean(KafkaConfig.AutoCreateTopicsEnableProp))
-    props.put(KafkaConfig.OffsetsTopicReplicationFactorProp, getShort(KafkaConfig.OffsetsTopicReplicationFactorProp))
-    props
+    val properties = new mutable.HashMap[Any, Any]()
+    properties.put(KafkaConfig.NumPartitionsProp, getInt(KafkaConfig.NumPartitionsProp))
+    properties.put(KafkaConfig.DefaultReplicationFactorProp, getInt(KafkaConfig.DefaultReplicationFactorProp))
+    properties.put(KafkaConfig.AutoCreateTopicsEnableProp, getBoolean(KafkaConfig.AutoCreateTopicsEnableProp))
+    properties.put(KafkaConfig.OffsetsTopicReplicationFactorProp, getShort(KafkaConfig.OffsetsTopicReplicationFactorProp))
+    if (!props.containsKey(KafkaConfig.GroupInitialRebalanceDelayMsProp))
+      properties.put(KafkaConfig.GroupInitialRebalanceDelayMsProp, "0")
+    else
+      properties.put(KafkaConfig.GroupInitialRebalanceDelayMsProp, getInt(KafkaConfig.GroupInitialRebalanceDelayMsProp))
+    info("Start HStream Kafka Broker With Properties: ")
+    properties.foreach { case (k, v) => info(s"$k = $v") }
+    properties
   }
 
   // Use advertised listeners if defined, fallback to listeners otherwise
