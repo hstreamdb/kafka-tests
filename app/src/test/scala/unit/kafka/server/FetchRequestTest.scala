@@ -56,7 +56,20 @@ class FetchRequestTest extends BaseFetchRequestTest {
         // version: Short = ApiKeys.FETCH.latestVersion()
         version: Short = fetchVersion
     ): FetchRequest =
-      this.createConsumerFetchRequest(maxResponseBytes, maxPartitionBytes, topicPartitions, offsetMap, version)
+      // HSTREAM_WORKAROUNDS: MIN_BYTES
+      // - if minBytes is 0, the fetch response may be empty,
+      // - if maxWaitMs is Int.MaxValue, the fetch may be blocked
+      //
+      // this.createConsumerFetchRequest(maxResponseBytes, maxPartitionBytes, topicPartitions, offsetMap, version)
+      this.createConsumerFetchRequest(
+        maxResponseBytes,
+        maxPartitionBytes,
+        topicPartitions,
+        offsetMap,
+        version,
+        minBytes = maxResponseBytes,
+        maxWaitMs = 1000
+      )
 
     val topicPartitionToLeader = createTopics(numTopics = 5, numPartitions = 6)
     val random = new Random(0)
@@ -238,7 +251,12 @@ class FetchRequestTest extends BaseFetchRequestTest {
       )
       .get
     val fetchRequest = FetchRequest.Builder
-      .forConsumer(4, Int.MaxValue, 0, createPartitionMap(maxPartitionBytes, Seq(topicPartition)))
+      // HSTREAM_WORKAROUNDS: MIN_BYTES
+      // - if minBytes is 0, the fetch response may be empty,
+      // - if maxWaitMs is Int.MaxValue, the fetch may be blocked
+      //
+      // .forConsumer(4, Int.MaxValue, 0, createPartitionMap(maxPartitionBytes, Seq(topicPartition)))
+      .forConsumer(4, 1000, maxPartitionBytes, createPartitionMap(maxPartitionBytes, Seq(topicPartition)))
       .isolationLevel(IsolationLevel.READ_COMMITTED)
       .build(4)
     val fetchResponse = sendFetchRequest(leaderId, fetchRequest)
@@ -555,7 +573,17 @@ class FetchRequestTest extends BaseFetchRequestTest {
 
     def fetch(version: Short, maxPartitionBytes: Int, closeAfterPartialResponse: Boolean): Option[FetchResponse] = {
       val fetchRequest = FetchRequest.Builder
-        .forConsumer(version, Int.MaxValue, 0, createPartitionMap(maxPartitionBytes, Seq(topicPartition)))
+        // HSTREAM_WORKAROUNDS: MIN_BYTES
+        // - if minBytes is 0, the fetch response may be empty,
+        // - if maxWaitMs is Int.MaxValue, the fetch may be blocked
+        //
+        // .forConsumer(version, Int.MaxValue, 0, createPartitionMap(maxPartitionBytes, Seq(topicPartition)))
+        .forConsumer(
+          version,
+          500,
+          maxPartitionBytes - 1000 /* minBytes */,
+          createPartitionMap(maxPartitionBytes, Seq(topicPartition))
+        )
         .build(version)
 
       val socket = connect(brokerSocketServer(leaderId))
@@ -771,10 +799,20 @@ class FetchRequestTest extends BaseFetchRequestTest {
       // all batches we are interested in.
       while (batchesReceived < expectedNumBatches) {
         val fetchRequest = FetchRequest.Builder
+          // HSTREAM_WORKAROUNDS: MIN_BYTES
+          // - if minBytes is 0, the fetch response may be empty,
+          // - if maxWaitMs is Int.MaxValue, the fetch may be blocked
+          //
+          // .forConsumer(
+          //   requestVersion,
+          //   Int.MaxValue,
+          //   0,
+          //   createPartitionMap(Int.MaxValue, Seq(topicPartition), Map(topicPartition -> currentFetchOffset))
+          // )
           .forConsumer(
             requestVersion,
-            Int.MaxValue,
-            0,
+            1000,
+            800,
             createPartitionMap(Int.MaxValue, Seq(topicPartition), Map(topicPartition -> currentFetchOffset))
           )
           .build(requestVersion)
@@ -1139,8 +1177,14 @@ class FetchRequestTest extends BaseFetchRequestTest {
         fetchVersion,
         -1,
         -1,
-        Int.MaxValue,
-        0,
+        // HSTREAM_WORKAROUNDS: MIN_BYTES
+        // - if minBytes is 0, the fetch response may be empty,
+        // - if maxWaitMs is Int.MaxValue, the fetch may be blocked
+        //
+        // Int.MaxValue,
+        // 0,
+        1000,
+        800,
         createPartitionMap(300, Seq(topicPartition), Map.empty)
       )
         .setMaxBytes(800)
@@ -1156,8 +1200,14 @@ class FetchRequestTest extends BaseFetchRequestTest {
       fetchVersion,
       -1,
       -1,
-      Int.MaxValue,
-      0,
+      // HSTREAM_WORKAROUNDS: MIN_BYTES
+      // - if minBytes is 0, the fetch response may be empty,
+      // - if maxWaitMs is Int.MaxValue, the fetch may be blocked
+      //
+      // Int.MaxValue,
+      // 0,
+      1000,
+      800,
       createPartitionMap(300, Seq(topicPartition), Map(topicPartition -> 1L))
     )
       .setMaxBytes(800)
