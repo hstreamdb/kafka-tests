@@ -32,8 +32,7 @@ class BaseFetchRequestTest extends BaseRequestTest {
   protected var producer: KafkaProducer[String, String] = _
 
   override def brokerPropertyOverrides(properties: Properties): Unit = {
-    // TMP_FOR_HSTREAM
-    // properties.put(KafkaConfig.FetchMaxBytes, Int.MaxValue.toString)
+    properties.put(KafkaConfig.FetchMaxBytes, Int.MaxValue.toString)
   }
 
   @AfterEach

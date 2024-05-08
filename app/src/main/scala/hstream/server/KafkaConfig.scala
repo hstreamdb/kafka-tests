@@ -47,6 +47,7 @@ object Defaults {
   // KAFKA_TO_HSTREAM: kafka default value is 3
   val DefaultOffsetsTopicReplicationFactor: Short = 1
   val GroupInitialRebalanceDelayMs = 3000
+  val FetchMaxBytes = 55 * 1024 * 1024
 
   // TODO: KAFKA_ORIGINAL
   // val Listeners = "PLAINTEXT://:9092"
@@ -70,6 +71,7 @@ object KafkaConfig {
   val DefaultReplicationFactorProp = "default.replication.factor"
   val OffsetsTopicReplicationFactorProp = "offsets.topic.replication.factor"
   val GroupInitialRebalanceDelayMsProp = "group.initial.rebalance.delay.ms"
+  val FetchMaxBytes = "fetch.max.bytes"
 
   // TODO: KAFKA_ORIGINAL
   // val ListenersProp = "listeners"
@@ -115,6 +117,9 @@ object KafkaConfig {
       .define(OffsetsTopicReplicationFactorProp, SHORT, Defaults.DefaultOffsetsTopicReplicationFactor, atLeast(1), HIGH, "$OffsetsTopicReplicationFactorDoc")
       .define(GroupInitialRebalanceDelayMsProp, INT, Defaults.GroupInitialRebalanceDelayMs, MEDIUM, "$GroupInitialRebalanceDelayMsDoc")
       .define(SaslKerberosServiceNameProp, STRING, null, MEDIUM, "$SaslKerberosServiceNameDoc")
+
+      /** ********* Fetch Configuration **************/
+      .define(FetchMaxBytes, INT, Defaults.FetchMaxBytes, atLeast(1024), MEDIUM, "$FetchMaxBytesDoc")
 
     // TODO: KAFKA_ORIGINAL
     // .define(ListenersProp, STRING, Defaults.Listeners, HIGH, "* ListenersDoc *")
@@ -191,6 +196,7 @@ class KafkaConfig private (
   val brokerId = getInt(KafkaConfig.BrokerIdProp)
   val numPartitions = getInt(KafkaConfig.NumPartitionsProp)
   val defaultReplicationFactor: Int = getInt(KafkaConfig.DefaultReplicationFactorProp)
+  val fetchMaxBytes = getInt(KafkaConfig.FetchMaxBytes)
 
   def hstreamKafkaBrokerProperties: Map[Any, Any] = {
     val properties = new mutable.HashMap[Any, Any]()
@@ -202,6 +208,7 @@ class KafkaConfig private (
       properties.put(KafkaConfig.GroupInitialRebalanceDelayMsProp, "0")
     else
       properties.put(KafkaConfig.GroupInitialRebalanceDelayMsProp, getInt(KafkaConfig.GroupInitialRebalanceDelayMsProp))
+    properties.put(KafkaConfig.FetchMaxBytes, fetchMaxBytes)
     info("Start HStream Kafka Broker With Properties: ")
     properties.foreach { case (k, v) => info(s"$k = $v") }
     properties
