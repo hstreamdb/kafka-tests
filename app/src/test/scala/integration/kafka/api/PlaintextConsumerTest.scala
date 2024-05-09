@@ -957,7 +957,6 @@ class PlaintextConsumerTest extends BaseConsumerTest {
   }
 
   @Test
-  @Disabled("fix join group")
   def testMultiConsumerRoundRobinAssignor(): Unit = {
     this.consumerConfig.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "roundrobin-group")
     this.consumerConfig
@@ -1060,7 +1059,6 @@ class PlaintextConsumerTest extends BaseConsumerTest {
    * BaseConsumerTest
    */
   @Test
-  @Disabled("fix join group")
   def testMultiConsumerDefaultAssignor(): Unit = {
     // use consumers and topics defined in this class + one more topic
     val producer = createProducer()
@@ -1105,7 +1103,6 @@ class PlaintextConsumerTest extends BaseConsumerTest {
     }
   }
 
-  @Disabled("fix join group")
   @ParameterizedTest
   @ValueSource(strings =
     Array(
@@ -1202,7 +1199,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
    * BaseConsumerTest It tests the assignment results is expected using default assignor (i.e. Range assignor)
    */
   @Test
-  @Disabled("assignment is not as expected")
+  @Disabled("server does not choose expected assignment protocol currently")
   def testMultiConsumerDefaultAssignorAndVerifyAssignment(): Unit = {
     // create two new topics, each having 3 partitions
     val topic1 = "topic1"
@@ -1239,7 +1236,6 @@ class PlaintextConsumerTest extends BaseConsumerTest {
   }
 
   @Test
-  @Disabled("test failed in ci")
   def testMultiConsumerSessionTimeoutOnStopPolling(): Unit = {
     runMultiConsumerSessionTimeoutTest(false)
   }
