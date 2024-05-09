@@ -103,7 +103,6 @@
    }
 
    @Test
-   @Disabled("rebalance delay too long, require support config 'group.initial.rebalance.delay.ms'")
    def testResetOffsetsExistingTopicSelectedGroups(): Unit = {
      produceMessages(topic, 100)
      val groups =
@@ -121,7 +120,6 @@
    }
 
    @Test
-   @Disabled("rebalance delay too long, require support config 'group.initial.rebalance.delay.ms'")
    def testResetOffsetsExistingTopicAllGroups(): Unit = {
      val args = buildArgsForAllGroups("--topic", topic, "--to-offset", "50")
      produceMessages(topic, 100)
@@ -136,7 +134,6 @@
    }
 
    @Test
-   @Disabled("fix HS-4680 first")
    def testResetOffsetsAllTopicsAllGroups(): Unit = {
      val args = buildArgsForAllGroups("--all-topics", "--to-offset", "50")
      val topics = 1 to 3 map (topic + _)
