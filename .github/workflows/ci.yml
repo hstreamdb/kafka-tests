@@ -28,7 +28,8 @@ jobs:
 
       - name: check Java code format
         run: |
-          ./gradlew spotlessJavaCheck
+          # TODO: Upstream kafka code has a different format, ignore this check.
+          # ./gradlew spotlessJavaCheck
           ./gradlew spotlessGroovyGradleCheck
 
   pre-tests:
