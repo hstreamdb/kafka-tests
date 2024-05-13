@@ -5,6 +5,7 @@ import org.apache.kafka.metadata.BrokerState
 import org.apache.kafka.common.utils.Time
 
 import java.nio.file.{Files, Path, Paths, StandardOpenOption}
+import java.io.{ByteArrayOutputStream, PrintWriter}
 import kafka.utils.Logging
 import kafka.network.SocketServer
 
@@ -13,6 +14,79 @@ import ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.sys.process._
 import scala.util.Random
+
+object Utils {
+  def runCommand(
+      cmd: String,
+      check: Boolean = true,
+      captureOut: Boolean = false
+  ): (Int, Option[String], Option[String]) = {
+    val result =
+      if (captureOut) {
+        val stdoutStream = new ByteArrayOutputStream
+        val stderrStream = new ByteArrayOutputStream
+        val stdoutWriter = new PrintWriter(stdoutStream)
+        val stderrWriter = new PrintWriter(stderrStream)
+        val exitValue = cmd ! (ProcessLogger(stdoutWriter.println, stderrWriter.println))
+        stdoutWriter.close()
+        stderrWriter.close()
+        (exitValue, Some(stdoutStream.toString), Some(stderrStream.toString))
+      } else {
+        val exitValue = cmd.!
+        (exitValue, None, None)
+      }
+    if (check) {
+      if (result._1 != 0) {
+        throw new RuntimeException(s"Failed to run command: $cmd")
+      }
+    }
+    result
+  }
+}
+
+object KafkaBroker extends Logging {
+  def initCluster(port: Int): Unit = {
+    Utils.runCommand(
+      s"docker run --rm --network host hstreamdb/hstream hstream-kafka --port $port node init"
+    )
+  }
+
+  def awaitCluster(num: Int, port: Int, timeout: Int = 30): Unit = {
+    if (timeout <= 0) {
+      throw new RuntimeException("Failed to start hstream cluster!")
+    }
+    val f = Future {
+      try {
+        // FIXME: better way to check cluster is ready
+        val (_, nodeStatusOutOpt, _) = Utils.runCommand(
+          s"docker run --rm --network host hstreamdb/hstream hstream-kafka --port $port node status",
+          captureOut = true,
+          check = false
+        )
+        val nodeStatusOut = nodeStatusOutOpt.get.trim.split("\n")
+        var numRunningNodes = 0
+        for (line <- nodeStatusOut) {
+          if (line.trim.startsWith("|")) {
+            info(s"=> ${line}")
+            if (line.contains("Running")) {
+              numRunningNodes += 1
+            }
+          }
+        }
+        if (numRunningNodes < num) {
+          throw new RuntimeException("Not enough running nodes")
+        }
+      } catch {
+        case e: Exception => {
+          info("=> Waiting cluster ready...")
+          Thread.sleep(2000)
+          awaitCluster(num, port, timeout - 2)
+        }
+      }
+    }
+    Await.result(f, 10.second)
+  }
+}
 
 class KafkaBroker(
     val config: KafkaConfig,
@@ -59,9 +133,9 @@ class KafkaBroker(
           val storeDir = config.testingConfig
             .getOrElse("store_dir", throw new IllegalArgumentException("store_dir is required"))
             .asInstanceOf[String]
-            val extraProps = config.hstreamKafkaBrokerProperties
-                .map { case (k, v) => s"--prop $k=$v" }
-                .mkString(" ")
+          val extraProps = config.hstreamKafkaBrokerProperties
+            .map { case (k, v) => s"--prop $k=$v" }
+            .mkString(" ")
           val dockerCmd =
             s"docker run -d --network host --name $containerName -v $storeDir:/data/store $image $command $extraProps"
           info(s"=> Start hserver by: $dockerCmd")
