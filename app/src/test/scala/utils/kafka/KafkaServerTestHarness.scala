@@ -32,7 +32,7 @@ import java.net.Socket
 import java.nio.ByteBuffer
 import java.util.{Arrays, Properties}
 import scala.annotation.nowarn
-import scala.collection.{Seq, mutable}
+import scala.collection.{mutable, Seq}
 import scala.jdk.CollectionConverters._
 import scala.reflect.ClassTag
 // import org.apache.kafka.controller.ControllerRequestContextUtil.ANONYMOUS_CONTEXT
@@ -373,8 +373,8 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 
   // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
   def receive[T <: AbstractResponse](socket: Socket, apiKey: ApiKeys, version: Short)(implicit
-                                                                                      classTag: ClassTag[T],
-                                                                                      @nowarn("cat=unused") nn: NotNothing[T]
+      classTag: ClassTag[T],
+      @nowarn("cat=unused") nn: NotNothing[T]
   ): T = {
     val incoming = new DataInputStream(socket.getInputStream)
     val len = incoming.readInt()
@@ -396,21 +396,21 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 
   // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
   def sendAndReceive[T <: AbstractResponse](
-                                             request: AbstractRequest,
-                                             socket: Socket,
-                                             clientId: String = "client-id",
-                                             correlationId: Option[Int] = None
-                                           )(implicit classTag: ClassTag[T], nn: NotNothing[T]): T = {
+      request: AbstractRequest,
+      socket: Socket,
+      clientId: String = "client-id",
+      correlationId: Option[Int] = None
+  )(implicit classTag: ClassTag[T], nn: NotNothing[T]): T = {
     send(request, socket, clientId, correlationId)
     receive[T](socket, request.apiKey, request.version)
   }
 
   // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
   def connectAndReceive[T <: AbstractResponse](
-                                                request: AbstractRequest,
-                                                destination: SocketServer = anySocketServer,
-                                                listenerName: ListenerName = listenerName
-                                              )(implicit classTag: ClassTag[T], nn: NotNothing[T]): T = {
+      request: AbstractRequest,
+      destination: SocketServer = anySocketServer,
+      listenerName: ListenerName = listenerName
+  )(implicit classTag: ClassTag[T], nn: NotNothing[T]): T = {
     val socket = connect(destination, listenerName)
     try sendAndReceive[T](request, socket)
     finally socket.close()
@@ -421,11 +421,11 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
    * Serializes and sends the request to the given api.
    */
   def send(
-            request: AbstractRequest,
-            socket: Socket,
-            clientId: String = "client-id",
-            correlationId: Option[Int] = None
-          ): Unit = {
+      request: AbstractRequest,
+      socket: Socket,
+      clientId: String = "client-id",
+      correlationId: Option[Int] = None
+  ): Unit = {
     val header = nextRequestHeader(request.apiKey, request.version, clientId, correlationId)
     sendWithHeader(request, header, socket)
   }
@@ -438,11 +438,11 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
 
   // KAFKA_TO_HSTREAM: move from: BaseRequestTest.scala
   def nextRequestHeader[T <: AbstractResponse](
-                                                apiKey: ApiKeys,
-                                                apiVersion: Short,
-                                                clientId: String = "client-id",
-                                                correlationIdOpt: Option[Int] = None
-                                              ): RequestHeader = {
+      apiKey: ApiKeys,
+      apiVersion: Short,
+      clientId: String = "client-id",
+      correlationIdOpt: Option[Int] = None
+  ): RequestHeader = {
     val correlationId = correlationIdOpt.getOrElse {
       this.correlationId += 1
       this.correlationId
@@ -502,13 +502,23 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
     val potentiallyRegeneratedConfigs = configs
     alive = new Array[Boolean](potentiallyRegeneratedConfigs.length)
     Arrays.fill(alive, false)
+    var initPort = 0
     for (config <- potentiallyRegeneratedConfigs) {
+      if (initPort == 0 && config.testingConfig.nonEmpty) {
+        initPort = config.port
+      }
       val broker = createBrokerFromConfig(config)
       _brokers += broker
       if (startup) {
         broker.startup()
         alive(_brokers.length - 1) = true
       }
+    }
+
+    // For HStream
+    if (initPort != 0) {
+      KafkaBroker.initCluster(initPort)
+      KafkaBroker.awaitCluster(alive.length, initPort)
     }
   }
 

@@ -2,13 +2,13 @@ use: broker_container
 
 broker_container:
   config:
-    # Optional. If no base_port, all ports will be random.
-    #
-    #base_port: ${base_port}
     advertised.address: 127.0.0.1
 
   testing_config:
     spec: 1
+    # Optional. If no base_port, all ports will be random.
+    #
+    #base_port: ${base_port}
     image: ${image}
     container_remove: true
     container_logs: true
@@ -24,9 +24,7 @@ broker_container:
         --store-log-level error
         --store-compression lz4
         %s
-    # TODO
-    #init_command: ""
-
+    init_mode: "boot"   # Oneof ["boot", "join"], default is "boot"
     metastore_port: ${metastore_port}
     store_dir: ${store_dir}
     store_admin_port: ${store_admin_port}

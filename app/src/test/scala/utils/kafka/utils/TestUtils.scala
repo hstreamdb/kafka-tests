@@ -144,9 +144,9 @@ object TestUtils extends Logging {
 
   val currentTestTimeMillis = System.currentTimeMillis()
 
-   /* Incorrect broker port which can used by kafka clients in tests. This port should not be used
+  /* Incorrect broker port which can used by kafka clients in tests. This port should not be used
     by any other service and hence we use a reserved port. */
-   val IncorrectBrokerPort = 225
+  val IncorrectBrokerPort = 225
 
 //   /** Port to use for unit tests that mock/don't require a real ZK server. */
 //   val MockZkPort = 1
@@ -2391,14 +2391,25 @@ object TestUtils extends Logging {
 //     (out.toString, err.toString)
 //   }
 //
-   def assertFutureExceptionTypeEquals(future: KafkaFuture[_], clazz: Class[_ <: Throwable],
-                                       expectedErrorMessage: Option[String] = None): Unit = {
-     val cause = assertThrows(classOf[ExecutionException], () => future.get()).getCause
-     assertTrue(clazz.isInstance(cause), "Expected an exception of type " + clazz.getName + "; got type " +
-       cause.getClass.getName)
-     expectedErrorMessage.foreach(message => assertTrue(cause.getMessage.contains(message), s"Received error message : ${cause.getMessage}" +
-       s" does not contain expected error message : $message"))
-   }
+  def assertFutureExceptionTypeEquals(
+      future: KafkaFuture[_],
+      clazz: Class[_ <: Throwable],
+      expectedErrorMessage: Option[String] = None
+  ): Unit = {
+    val cause = assertThrows(classOf[ExecutionException], () => future.get()).getCause
+    assertTrue(
+      clazz.isInstance(cause),
+      "Expected an exception of type " + clazz.getName + "; got type " +
+        cause.getClass.getName
+    )
+    expectedErrorMessage.foreach(message =>
+      assertTrue(
+        cause.getMessage.contains(message),
+        s"Received error message : ${cause.getMessage}" +
+          s" does not contain expected error message : $message"
+      )
+    )
+  }
 //
 //   def assertBadConfigContainingMessage(props: Properties, expectedExceptionContainsText: String): Unit = {
 //     try {
@@ -2791,17 +2802,33 @@ object TestUtils extends Logging {
       testName: String
   ): Seq[Properties] = {
     val brokerConfig = brokerContainer.get("config").asInstanceOf[java.util.Map[String, Object]].asScala
-    // NOTE: Since this has side effect, do NOT move it inside the following loop (startingIdNumber to endingIdNumber)
-    val basePort = brokerConfig.remove("base_port").asInstanceOf[Option[Int]]
+    val testingConfig: collection.mutable.Map[String, Object] =
+      brokerContainer
+        .get("testing_config")
+        .asInstanceOf[java.util.Map[String, Object]]
+        .asScala
+
     val advertisedAddress = brokerConfig
       .getOrElse(
         "advertised.address",
         throw new IllegalArgumentException("advertised.address is required in broker_container")
       )
       .asInstanceOf[String]
+    val basePort = testingConfig.get("base_port").asInstanceOf[Option[Int]]
+    val initMode = testingConfig.getOrElse("init_mode", "boot").asInstanceOf[String]
+    val commandTmpl = testingConfig
+      .getOrElse(
+        "command",
+        throw new IllegalArgumentException("command is required in testing_config")
+      )
+      .asInstanceOf[String]
+    // TODO: support rqlite
+    val metastorePort = testingConfig
+      .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required in testing_config"))
+      .asInstanceOf[Int]
+    val cleanContainerLog = testingConfig.getOrElse("container_logs_clean", false).asInstanceOf[Boolean]
 
-    // FIXME: we use a fixed port (the first gossipPort) for seed node, this is a temporary solution
-    var fstGossipPort: Int = -1
+    var seedNodes = ""
 
     // generate
     val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
@@ -2814,8 +2841,16 @@ object TestUtils extends Logging {
         case None    => getUnusedPort()
         case Some(p) => p + idx * 2 + 1
       }
-      if (idx == 0) {
-        fstGossipPort = gossipPort
+      if (initMode == "join") {
+        // we use a fixed port (the first gossipPort) for seed node when initMode is "join"
+        if (idx == 0) {
+          seedNodes = s"127.0.0.1:$gossipPort"
+        }
+      } else if (initMode == "boot") {
+        val sepr = if (idx == 0) "" else ","
+        seedNodes += s"${sepr}127.0.0.1:$gossipPort"
+      } else {
+        throw new IllegalArgumentException("init_mode must in [\"boot\", \"join\"]")
       }
       // broker config
       prop.put("broker.id", nodeId.toString)
@@ -2823,40 +2858,25 @@ object TestUtils extends Logging {
       prop.put("gossip.port", gossipPort.toString)
       brokerConfig.foreach { case (k, v) => prop.put(k, v.toString) }
       // testing config
-      val testingConfig: collection.mutable.Map[String, Object] =
-        brokerContainer
-          .get("testing_config")
-          .asInstanceOf[java.util.Map[String, Object]]
-          .asScala
-          .clone()
-      val commandTmpl: String = testingConfig
-        .getOrElse(
-          "command",
-          throw new IllegalArgumentException("command is required in testing_config")
-        )
-        .asInstanceOf[String]
-      // TODO: support rqlite
-      val metastorePort = testingConfig
-        .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required in testing_config"))
-        .asInstanceOf[Int]
-      // FIXME: we use a fixed port (the first gossipPort) for seed node, this is a temporary solution
       val args = s"""--server-id $nodeId
                 --port $port --gossip-port $gossipPort
-                --seed-nodes 127.0.0.1:$fstGossipPort
                 --advertised-address $advertisedAddress
                 --metastore-uri zk://127.0.0.1:$metastorePort
                 --store-config /data/store/logdevice.conf
                 """.stripMargin.linesIterator.mkString(" ").trim
-      testingConfig.update("command", commandTmpl.format(args))
-      testingConfig.put(
-        "container_logs_dir",
-        getContainerLogsDir(testName, testingConfig.getOrElse("container_logs_clean", false).asInstanceOf[Boolean])
-      )
-      prop.put("testing", testingConfig)
-
-      prop
+      (prop, args)
     }
-    return props
+    // The seedNodes is determined after all broker configs are created
+    return props.map {
+      case (prop, args) => {
+        val newArgs = s"$args --seed-nodes $seedNodes"
+        var newTestingConfig = testingConfig.clone()
+        newTestingConfig.update("command", commandTmpl.format(newArgs))
+        newTestingConfig.put("container_logs_dir", getContainerLogsDir(testName, cleanContainerLog))
+        prop.put("testing", newTestingConfig)
+        prop
+      }
+    }
   }
 
   private def formatTestNameAsFile(testName: String) = {
