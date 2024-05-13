@@ -20,7 +20,7 @@
  import java.time.Duration
  import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
  import java.util.{Collections, Properties}
- import kafka.admin.ConsumerGroupCommand.{ConsumerGroupCommandOptions, ConsumerGroupService, warn}
+ import kafka.admin.ConsumerGroupCommand.{ConsumerGroupCommandOptions, ConsumerGroupService}
  import kafka.integration.KafkaServerTestHarness
  import kafka.server.KafkaConfig
  import kafka.utils.TestUtils
@@ -126,8 +126,6 @@
      val props = new Properties
      configure(props)
      customPropsOpt.foreach(props.asScala ++= _.asScala)
-     warn(s"properties for consumer: broker -> $broker, groupId -> $groupId")
-     props.forEach((k, v) => warn(s"$k -> $v"))
      val consumer = new KafkaConsumer(props)
 
      def configure(props: Properties): Unit = {
@@ -214,4 +212,3 @@
    }
 
  }
-

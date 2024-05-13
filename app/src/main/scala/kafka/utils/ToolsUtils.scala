@@ -18,7 +18,7 @@ package kafka.utils
 
 import joptsimple.OptionParser
 import org.apache.kafka.common.{Metric, MetricName}
-import org.apache.kafka.util.CommandLineUtils
+import org.apache.kafka.server.util.CommandLineUtils
 
 import scala.collection.mutable
 

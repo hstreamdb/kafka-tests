@@ -79,7 +79,6 @@ dependencies {
     implementation "org.apache.kafka:kafka-clients:${KAFKA_CLIENT_VERSION}"
     implementation "com.fasterxml.jackson.core:jackson-annotations:$versions.jackson"
     implementation "com.fasterxml.jackson.core:jackson-databind:$versions.jacksonDatabind"
-    // XXX: May be used in the future
     implementation "com.fasterxml.jackson.module:jackson-module-scala_$versions.baseScala:$versions.jackson"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$versions.jackson"
     implementation "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:$versions.jackson"

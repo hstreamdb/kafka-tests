@@ -17,28 +17,30 @@
 
 package kafka.admin
 
-import com.fasterxml.jackson.dataformat.csv.CsvMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import joptsimple.{OptionException, OptionSpec}
-import kafka.utils.Implicits._
-import kafka.utils._
-import org.apache.kafka.clients.CommonClientConfigs
-import org.apache.kafka.clients.admin._
-import org.apache.kafka.clients.consumer.OffsetAndMetadata
-import org.apache.kafka.common.protocol.Errors
-import org.apache.kafka.common.requests.ListOffsetsResponse
-import org.apache.kafka.common.utils.Utils
-import org.apache.kafka.common.{ConsumerGroupState, KafkaException, Node, TopicPartition}
-import org.apache.kafka.util.{CommandDefaultOptions, CommandLineUtils}
-
 import java.time.{Duration, Instant}
 import java.util.{Collections, Properties}
-import scala.collection.immutable.TreeMap
+import com.fasterxml.jackson.dataformat.csv.CsvMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import kafka.utils._
+import kafka.utils.Implicits._
+import org.apache.kafka.clients.admin._
+import org.apache.kafka.clients.consumer.OffsetAndMetadata
+import org.apache.kafka.clients.CommonClientConfigs
+import org.apache.kafka.common.utils.Utils
+import org.apache.kafka.common.{KafkaException, Node, TopicPartition}
+import org.apache.kafka.server.util.{CommandDefaultOptions, CommandLineUtils}
+
+import scala.jdk.CollectionConverters._
 import scala.collection.mutable.ListBuffer
 import scala.collection.{Map, Seq, immutable, mutable}
-import scala.jdk.CollectionConverters._
-import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
+import joptsimple.{OptionException, OptionSpec}
+import org.apache.kafka.common.protocol.Errors
+
+import scala.collection.immutable.TreeMap
+import scala.reflect.ClassTag
+import org.apache.kafka.common.ConsumerGroupState
+import org.apache.kafka.common.requests.ListOffsetsResponse
 
 object ConsumerGroupCommand extends Logging {
 
@@ -426,15 +428,6 @@ object ConsumerGroupCommand extends Logging {
         withTimeoutMs(new DescribeConsumerGroupsOptions)
       ).describedGroups()
 
-      info(s"=========== get group info ================")
-      consumerGroups.values().forEach { future =>
-        val groupDescription = future.get()
-        val groupId = groupDescription.groupId()
-        val groupDescriptionStr = groupDescription.toString
-        info(s"GroupId: $groupId, GroupDescription: $groupDescriptionStr")
-      }
-      info(s"============================================")
-
       val result =
         consumerGroups.asScala.foldLeft(immutable.Map[String, Map[TopicPartition, OffsetAndMetadata]]()) {
           case (acc, (groupId, groupDescription)) =>
@@ -442,7 +435,6 @@ object ConsumerGroupCommand extends Logging {
               case "Empty" | "Dead" =>
                 val partitionsToReset = getPartitionsToReset(groupId)
                 val preparedOffsets = prepareOffsetsToReset(groupId, partitionsToReset)
-                info(s"prepare to reset offsets for group '$groupId' to $preparedOffsets, partitionsToReset: $partitionsToReset")
 
                 // Dry-run is the default behavior if --execute is not specified
                 val dryRun = opts.options.has(opts.dryRunOpt) || !opts.options.has(opts.executeOpt)

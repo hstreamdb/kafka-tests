@@ -13,7 +13,7 @@
  package kafka.admin
 
  import java.io.{BufferedWriter, FileWriter}
- import java.text.SimpleDateFormat
+ import java.text.{SimpleDateFormat}
  import java.util.{Calendar, Date, Properties}
  import joptsimple.OptionException
  import kafka.admin.ConsumerGroupCommand.ConsumerGroupService
@@ -23,7 +23,7 @@
  import org.apache.kafka.common.TopicPartition
  import org.apache.kafka.test
  import org.junit.jupiter.api.Assertions._
- import org.junit.jupiter.api.{Disabled, Test, Timeout}
+ import org.junit.jupiter.api.Test
 
  import scala.jdk.CollectionConverters._
  import scala.collection.Seq
@@ -47,10 +47,9 @@
    val topic2 = "foo2"
 
    override def generateConfigs: Seq[KafkaConfig] = {
-//     TestUtils.createBrokerConfigs(1, zkConnect, enableControlledShutdown = false)
-//       .map(KafkaConfig.fromProps(_, overridingProps))
-
      // KAFKA_TO_HSTREAM
+     // TestUtils.createBrokerConfigs(1, zkConnect, enableControlledShutdown = false)
+     //   .map(KafkaConfig.fromProps(_, overridingProps))
      TestUtils.createBrokerConfigs(1, metaStoreConnect, testInfo).map(KafkaConfig.fromProps(_, overridingProps))
    }
 
@@ -79,12 +78,9 @@
      val args = buildArgsForGroup(group, "--all-topics", "--to-current", "--execute")
      val consumerGroupCommand = getConsumerGroupService(args)
      // Make sure we got a coordinator
-     // TestUtils.waitUntilTrue(() => {
-     //   consumerGroupCommand.collectGroupState(group).coordinator.host() == "localhost"
-     // }, "Can't find a coordinator")
-
-     // KAFKA_TO_HSTREAM
      TestUtils.waitUntilTrue(() => {
+       // KAFKA_TO_HSTREAM
+       //consumerGroupCommand.collectGroupState(group).coordinator.host() == "localhost"
        consumerGroupCommand.collectGroupState(group).coordinator.host() == "127.0.0.1"
      }, "Can't find a coordinator")
      val resetOffsets = consumerGroupCommand.resetOffsets()(group)
@@ -143,12 +139,9 @@
        topic <- topics
        group <- groups
      } {
-       warn(s"========== start consume topic: $topic, group: $group")
        val executor = addConsumerGroupExecutor(numConsumers = 3, topic = topic, group = group)
        awaitConsumerProgress(topic = topic, count = 100L, group = group)
        executor.shutdown()
-       warn(s"========== end consume topic: $topic, group: $group")
-       Thread.sleep(1000L)
      }
      resetAndAssertOffsets(args, expectedOffset = 50, dryRun = true, topics = topics)
      resetAndAssertOffsets(args ++ Array("--dry-run"), expectedOffset = 50, dryRun = true, topics = topics)
@@ -208,7 +201,9 @@
      createTopic(topic)
      resetAndAssertOffsets(args, expectedOffset = 0, topics = Seq("foo2"))
 
-//     adminZkClient.deleteTopic(topic)
+     // KAFKA_TO_HSTREAM
+     // adminZkClient.deleteTopic(topic)
+     deleteTopic(topic)
    }
 
    @Test
@@ -295,8 +290,9 @@
      val tp1 = new TopicPartition(topic, 1)
      val expectedOffsets = Map(tp0 -> priorCommittedOffsets(tp0), tp1 -> 0L)
      resetAndAssertOffsetsCommitted(consumerGroupCommand, expectedOffsets, topic)
-
-//     adminZkClient.deleteTopic(topic)
+     // KAFKA_TO_HSTREAM
+     // adminZkClient.deleteTopic(topic)
+     deleteTopic(topic)
    }
 
    @Test
@@ -320,8 +316,11 @@
      assertEquals(Map(tp1 -> 0L), committedOffsets(topic1))
      assertEquals(Map(tp2 -> 0L), committedOffsets(topic2))
 
-//     adminZkClient.deleteTopic(topic1)
-//     adminZkClient.deleteTopic(topic2)
+     // KAFKA_TO_HSTREAM
+     // adminZkClient.deleteTopic(topic1)
+     // adminZkClient.deleteTopic(topic2)
+     deleteTopic(topic1)
+     deleteTopic(topic2)
    }
 
    @Test
@@ -348,9 +347,11 @@
 
      assertEquals(priorCommittedOffsets1.toMap + (tp1 -> 0L), committedOffsets(topic1))
      assertEquals(priorCommittedOffsets2.toMap + (tp2 -> 0L), committedOffsets(topic2))
-
-//     adminZkClient.deleteTopic(topic1)
-//     adminZkClient.deleteTopic(topic2)
+     // KAFKA_TO_HSTREAM
+     // adminZkClient.deleteTopic(topic1)
+     // adminZkClient.deleteTopic(topic2)
+     deleteTopic(topic1)
+     deleteTopic(topic2)
    }
 
    @Test
@@ -379,7 +380,9 @@
      val importedOffsets = consumerGroupCommandExec.resetOffsets()
      assertEquals(Map(tp0 -> 2L, tp1 -> 2L), importedOffsets(group).map { case (k, v) => k -> v.offset })
 
-//     adminZkClient.deleteTopic(topic)
+     // KAFKA_TO_HSTREAM
+     // adminZkClient.deleteTopic(topic)
+     deleteTopic(topic)
    }
 
    @Test
@@ -428,7 +431,9 @@
      val importedOffsets2 = consumerGroupCommandExec2.resetOffsets()
      assertEquals(Map(t1p0 -> 2L, t1p1 -> 2L), importedOffsets2(group1).map { case (k, v) => k -> v.offset })
 
-//     adminZkClient.deleteTopic(topic)
+     // KAFKA_TO_HSTREAM
+     // adminZkClient.deleteTopic(topic)
+     deleteTopic(topic)
    }
 
    @Test
@@ -462,14 +467,12 @@
 
        TestUtils.waitUntilTrue(() => {
          val committed = consumer.committed(partitions.asJava).values.asScala
-         info(s"=======================committed: $committed")
          val total = committed.foldLeft(0L) { case (currentSum, offsetAndMetadata) =>
            currentSum + Option(offsetAndMetadata).map(_.offset).getOrElse(0L)
          }
-         info(s"=======================total: $total")
          total == count
        }, "Expected that consumer group has consumed all messages from topic/partition. " +
-         s"Expected offset: $count. Actual offset: ${committedOffsets(topic, group).values.sum}, topic: ${topic}")
+         s"Expected offset: $count. Actual offset: ${committedOffsets(topic, group).values.sum}")
 
      } finally {
        consumer.close()
@@ -491,7 +494,6 @@
      val consumerGroupCommand = getConsumerGroupService(args)
      val expectedOffsets = topics.map(topic => topic -> Map(new TopicPartition(topic, 0) -> expectedOffset)).toMap
      val resetOffsetsResultByGroup = resetOffsets(consumerGroupCommand)
-     info(s"resetOffsetsResultByGroup: $resetOffsetsResultByGroup")
 
      try {
        for {
@@ -499,7 +501,6 @@
          (group, partitionInfo) <- resetOffsetsResultByGroup
        } {
          val priorOffsets = committedOffsets(topic = topic, group = group)
-         info(s"priorOffsets: $priorOffsets")
          assertEquals(expectedOffsets(topic),
            partitionInfo.filter(partitionInfo => partitionInfo._1.topic() == topic).map { case (k, v) => k -> v.offset })
          assertEquals(if (dryRun) priorOffsets else expectedOffsets(topic), committedOffsets(topic = topic, group = group))
