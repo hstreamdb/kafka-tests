@@ -205,7 +205,8 @@ class KafkaBroker(
             .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required"))
             .asInstanceOf[Int]
           info("=> Delete all zk nodes...")
-          s"docker run --rm --network host zookeeper:3.7 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
+          // Use the same zk version as scripe/dev-tools to avoid pulling new image
+          s"docker run --rm --network host zookeeper:3.6 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
         } else {
           throw new NotImplementedError("shutdown: spec is invalid!")
         }
