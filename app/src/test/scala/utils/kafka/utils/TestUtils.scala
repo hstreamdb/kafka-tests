@@ -1465,18 +1465,47 @@ object TestUtils extends Logging {
       topic: String,
       expectedNumPartitions: Int
   ): Map[TopicPartition, UpdateMetadataPartitionState] = {
+    var description: Option[TopicDescription] = None
     waitUntilTrue(
       () => {
-        describeTopic(admin, topic).partitions().size() == expectedNumPartitions
+        if (expectedNumPartitions == 0) {
+          // WARNING: `describeTopic` can throw `UnknownTopicOrPartitionException`,
+          //          and may return null on some abnormal cases. So it is
+          //          necessary to check this. Same for `else` branch.
+          try {
+            val curDescription = describeTopic(admin, topic)
+            if (curDescription == null) {
+              true
+            } else {
+              description = Some(curDescription)
+              false
+            }
+          } catch {
+            case e: ExecutionException =>
+              if (e.getCause != null && e.getCause.isInstanceOf[UnknownTopicOrPartitionException])
+                true
+              else
+                throw e
+          }
+        } else {
+          val curDescription = describeTopic(admin, topic)
+          if (curDescription == null) {
+            false
+          } else {
+            description = Some(curDescription)
+            curDescription.partitions().size() == expectedNumPartitions
+          }
+        }
       },
       s"Topic [$topic] metadata not propagated after 60000 ms",
       waitTimeMs = 60000L
     )
 
-    val description = describeTopic(admin, topic)
     (0 until expectedNumPartitions).map { i =>
       new TopicPartition(topic, i) -> {
-        val p = description.partitions().get(i)
+        val p = description.getOrElse(
+          throw new IllegalStateException(s"Cannot get topic: $topic, partition: $i from server"))
+          .partitions().get(i)
         new UpdateMetadataPartitionState()
           .setTopicName(topic)
           .setPartitionIndex(i)

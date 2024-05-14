@@ -79,11 +79,12 @@ dependencies {
     implementation "org.apache.kafka:kafka-clients:${KAFKA_CLIENT_VERSION}"
     implementation "com.fasterxml.jackson.core:jackson-annotations:$versions.jackson"
     implementation "com.fasterxml.jackson.core:jackson-databind:$versions.jacksonDatabind"
-    // XXX: May be used in the future
-    // implementation "com.fasterxml.jackson.module:jackson-module-scala_$versions.baseScala:$versions.jackson"
-    // implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$versions.jackson"
-    // implementation "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:$versions.jackson"
-    // implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:$versions.jackson"
+    implementation "com.fasterxml.jackson.module:jackson-module-scala_$versions.baseScala:$versions.jackson"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$versions.jackson"
+    implementation "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:$versions.jackson"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:$versions.jackson"
+
+    implementation group: 'net.sf.jopt-simple', name: 'jopt-simple', version: '5.0.4'
 
     testImplementation "org.scala-lang:scala-library:$versions.scala"
     testImplementation "org.scala-lang.modules:scala-collection-compat_$versions.baseScala:$versions.scalaCollectionCompat"
