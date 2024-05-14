@@ -518,7 +518,14 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
     // For HStream
     if (initPort != 0) {
       KafkaBroker.initCluster(initPort)
-      KafkaBroker.awaitCluster(alive.length, initPort)
+      // TODO: Theoretically, it is adequate to ask any node to check the cluster status.
+      //       However, due to the limitation of the current implementation, the cluster
+      //       status may be different between different nodes'views. This can cause infinite
+      //       block in some edge cases (lookup resources).
+      // KafkaBroker.awaitCluster(alive.length, initPort)
+      for (config <- potentiallyRegeneratedConfigs) {
+        KafkaBroker.awaitCluster(alive.length, config.port)
+      }
     }
   }
 
