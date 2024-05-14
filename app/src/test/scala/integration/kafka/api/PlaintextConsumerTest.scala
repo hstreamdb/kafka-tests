@@ -1199,7 +1199,6 @@ class PlaintextConsumerTest extends BaseConsumerTest {
    * BaseConsumerTest It tests the assignment results is expected using default assignor (i.e. Range assignor)
    */
   @Test
-  @Disabled("server does not choose expected assignment protocol currently")
   def testMultiConsumerDefaultAssignorAndVerifyAssignment(): Unit = {
     // create two new topics, each having 3 partitions
     val topic1 = "topic1"
