@@ -363,8 +363,7 @@ abstract class AbstractConsumerTest extends BaseRequestTest {
     TestUtils.pollUntilTrue(
       consumer,
       () => rebalanceListener.callsToAssigned > numReassignments,
-      "Timed out before expected rebalance completed",
-      waitTimeMs = 600000 // FIXME: PULL_TIMEOUTS
+      "Timed out before expected rebalance completed"
     )
   }
 

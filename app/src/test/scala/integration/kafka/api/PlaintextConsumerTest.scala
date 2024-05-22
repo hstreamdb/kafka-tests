@@ -513,7 +513,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
       consumer,
       () => callback.successCount >= count || callback.lastError.isDefined,
       "Failed to observe commit callback before timeout",
-      waitTimeMs = 600000 // waitTimeMs = 10000, FIXME: PULL_TIMEOUTS
+      waitTimeMs = 10000
     )
 
     assertEquals(None, callback.lastError)
@@ -2000,8 +2000,7 @@ class PlaintextConsumerTest extends BaseConsumerTest {
       consumer,
       () => consumer.assignment() == expectedAssignment.asJava,
       s"Timed out while awaiting expected assignment $expectedAssignment. " +
-        s"The current assignment is ${consumer.assignment()}",
-      waitTimeMs = 600000 // FIXME: PULL_TIMEOUTS
+        s"The current assignment is ${consumer.assignment()}"
     )
   }
 
