@@ -85,7 +85,10 @@ public class ClusterExtension implements BeforeEachCallback, AfterEachCallback {
 
     log.info("hserverInnerUrls: {}", hserverInnerUrls);
     hservers.addAll(bootstrapHServerCluster(hserverConfs, hserverInnerUrls, dataDir));
+    // FIXME: A better way to make sure the cluster is ready should be used here.
+    //        For example, wait for **EVERY** node to return **ALL** nodes in the cluster (by hadmin).
     hservers.forEach(h -> h.waitingFor(Wait.forLogMessage(".*Cluster is ready!.*", 1)));
+    hservers.forEach(h -> h.waitingFor(Wait.forLogMessage(".*Now I can make resource allocation decisions.*", 1));
     log.info("SERVER Setup Logs:");
     hservers.forEach(h -> log.info(h.getLogs()));
     var serverHosts =
