@@ -38,6 +38,7 @@ import kafka.cluster.EndPoint
 import kafka.utils.{CoreUtils, Logging}
 import scala.jdk.CollectionConverters._
 import kafka.utils.Implicits._
+import scala.util.Random
 
 object Defaults {
 
@@ -398,7 +399,27 @@ object TestConfig {
         .get("testing_config")
         .asInstanceOf[java.util.Map[String, Object]]
         .asScala
+    val spec = testingConfig
+      .getOrElse("spec", throw new IllegalArgumentException("spec is required in testing_config"))
+      .asInstanceOf[Int]
 
+    if (spec == 1) {
+      parseTestingConfig1(brokerConfig, testingConfig, startingIdNumber, endingIdNumber, testName, unusedPorts);
+    } else if (spec == 2) {
+      parseTestingConfig2(brokerConfig, testingConfig, startingIdNumber, endingIdNumber, testName, unusedPorts);
+    } else {
+      throw new IllegalArgumentException("Invalid testing spec!")
+    }
+  }
+
+  private def parseTestingConfig1(
+      brokerConfig: collection.mutable.Map[String, Object],
+      testingConfig: collection.mutable.Map[String, Object],
+      startingIdNumber: Int,
+      endingIdNumber: Int,
+      testName: String,
+      unusedPorts: Seq[Int]
+  ): Seq[Properties] = {
     val advertisedAddress = brokerConfig
       .getOrElse(
         "advertised.address",
@@ -464,6 +485,84 @@ object TestConfig {
         var newTestingConfig = testingConfig.clone()
         newTestingConfig.update("command", commandTmpl.format(newArgs))
         newTestingConfig.put("container_logs_dir", getContainerLogsDir(testName, cleanContainerLog))
+        prop.put("testing", newTestingConfig)
+        prop
+      }
+    }
+  }
+
+  private def parseTestingConfig2(
+      brokerConfig: collection.mutable.Map[String, Object],
+      testingConfig: collection.mutable.Map[String, Object],
+      startingIdNumber: Int,
+      endingIdNumber: Int,
+      testName: String,
+      unusedPorts: Seq[Int]
+  ): Seq[Properties] = {
+    val advertisedAddress = brokerConfig
+      .getOrElse(
+        "advertised.address",
+        throw new IllegalArgumentException("advertised.address is required in broker_container")
+      )
+      .asInstanceOf[String]
+    val basePort = testingConfig.get("base_port").asInstanceOf[Option[Int]]
+    val configMetaServerPort = testingConfig.get("meta_port").asInstanceOf[Option[Int]]
+    val commandTmpl = testingConfig
+      .getOrElse(
+        "command",
+        throw new IllegalArgumentException("command is required in testing_config")
+      )
+      .asInstanceOf[String]
+    val cleanContainerLog = testingConfig.getOrElse("container_logs_clean", false).asInstanceOf[Boolean]
+    val storeConfig = testingConfig.getOrElse(
+      "store_config",
+      throw new IllegalArgumentException("store_config is required in testing_config")
+    )
+
+    // For unusedPorts, diff with parseTestingConfig1:
+    //
+    // 1. Choose 0, 2, 4, ... as server port
+    // 2. Choose 1 as meta server port
+
+    // XXX: Start only one meta server
+    val metaServerPort = configMetaServerPort match {
+      case None    => unusedPorts(1) // Choose 1 as meta server port
+      case Some(p) => p
+    }
+    val metaServerContainerName: String = {
+      val rand = Random.alphanumeric.take(10).mkString
+      s"kafka-tests-metaserver-${scala.util.Properties.userName}-$rand"
+    }
+
+    // generate
+    val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
+      val prop = new Properties
+      // Choose 0, 2, 4, ... as server port
+      val port = basePort match {
+        case None    => unusedPorts(idx * 2)
+        case Some(p) => p + idx * 2
+      }
+      // broker config
+      prop.put("broker.id", nodeId.toString)
+      prop.put("port", port.toString)
+      // prop.put("gossip.port", "0")
+      brokerConfig.foreach { case (k, v) => prop.put(k, v.toString) }
+      // testing config
+      val args = s"""--server-id $nodeId
+                --port $port --advertised-address $advertisedAddress
+                --meta-servers http://127.0.0.1:$metaServerPort
+                --store-config $storeConfig
+                """.stripMargin.linesIterator.mkString(" ").trim
+      (prop, args)
+    }
+    // The seedNodes is determined after all broker configs are created
+    return props.map {
+      case (prop, args) => {
+        var newTestingConfig = testingConfig.clone()
+        newTestingConfig.update("command", commandTmpl.format(args))
+        newTestingConfig.put("container_logs_dir", getContainerLogsDir(testName, cleanContainerLog))
+        newTestingConfig.put("metaserver_port", metaServerPort.asInstanceOf[Object])
+        newTestingConfig.put("metaserver_container_name", metaServerContainerName)
         prop.put("testing", newTestingConfig)
         prop
       }
