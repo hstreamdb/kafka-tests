@@ -37,13 +37,6 @@ runs:
         java-version: ${{ inputs.java-version }}
         cache: "gradle"
 
-    - name: Start required services
-      if: ${{ inputs.is_lagacy_tests != 'true' }}
-      shell: bash
-      run: |
-        cd ${{ inputs.path }}
-        ./script/dev-tools start-services --services store zookeeper
-
     - name: Run lagacy tests
       if: ${{ inputs.is_lagacy_tests == 'true' }}
       shell: bash

@@ -82,6 +82,9 @@ object KafkaBroker extends Logging {
       throw new RuntimeException("No broker configs found!")
     }
     val initPort = configs.head.port
+    val image = configs.head.testingConfig
+      .getOrElse("image", throw new IllegalArgumentException("image is required"))
+      .asInstanceOf[String]
     val spec = configs.head.testingConfig
       .getOrElse("spec", throw new IllegalArgumentException("spec is required"))
       .asInstanceOf[Int]
@@ -93,11 +96,16 @@ object KafkaBroker extends Logging {
       //       status may be different between different nodes'views. This can cause infinite
       //       block in some edge cases (lookup resources).
       for (config <- configs) {
-        awaitNode(num, config.port, timeout)
+        awaitNode(image, num, config.port, timeout)
       }
     } else if (spec == 2) {
-      // TODO
-      Thread.sleep(5000)
+      // TODO: Theoretically, it is adequate to ask any node to check the cluster status.
+      //       However, due to the limitation of the current implementation, the cluster
+      //       status may be different between different nodes'views. This can cause infinite
+      //       block in some edge cases (lookup resources).
+      for (config <- configs) {
+        awaitNode(image, num, config.port, timeout)
+      }
     } else {
       throw new NotImplementedError("awaitCluster: spec is invalid!")
     }
@@ -109,7 +117,7 @@ object KafkaBroker extends Logging {
     )
   }
 
-  private def awaitNode(num: Int, port: Int, timeout: Int = 30): Unit = {
+  private def awaitNode(cliImage: String, num: Int, port: Int, timeout: Int = 30): Unit = {
     if (timeout <= 0) {
       throw new RuntimeException("Failed to start hstream cluster!")
     }
@@ -117,7 +125,7 @@ object KafkaBroker extends Logging {
       try {
         // FIXME: better way to check cluster is ready
         val (_, nodeStatusOutOpt, _) = Utils.runCommand(
-          s"docker run --rm --network host hstreamdb/hstream hstream-kafka --port $port node status",
+          s"docker run --rm --network host $cliImage hstream-kafka --port $port node status",
           captureOut = true,
           check = false
         )
@@ -136,9 +144,9 @@ object KafkaBroker extends Logging {
         }
       } catch {
         case e: Exception => {
-          info("=> Waiting cluster ready...")
+          info("=> Waiting broker ready...")
           Thread.sleep(2000)
-          awaitNode(num, port, timeout - 2)
+          awaitNode(cliImage, num, port, timeout - 2)
         }
       }
     }

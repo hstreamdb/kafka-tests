@@ -2,7 +2,7 @@
 set -e
 
 hstream_image=${hstream_image:-hstreamdb/hstream:latest}
-CONFIG_FILE=$PWD/local-data/config.yaml
+CONFIG_FILE=${CONFIG_FILE:-$PWD/local-data/config.yaml}
 
 find_freeport() {
     echo $(python3 -c '
@@ -12,11 +12,22 @@ with socketserver.TCPServer(("127.0.0.1", 0), None) as s:
     ')
 }
 
+ENV_FILE="local-data/dev_tools.env"
+
+start_required_services() {
+    if [ -f $ENV_FILE ]; then
+        echo "Ignore starting services..."
+    else
+        echo "Starting required services..."
+        ./script/dev-tools start-services --services store zookeeper
+    fi
+}
+
 generate_config() {
-    env_file="local-data/dev_tools.env"
-    if [ -f $env_file ]; then
-        store_admin_port=$(cat $env_file | grep STORE_ADMIN_LOCAL_PORT | cut -d'=' -f2)
-        zookeeper_port=$(cat $env_file | grep ZOOKEEPER_LOCAL_PORT | cut -d'=' -f2)
+    if [ -f $ENV_FILE ]; then
+        echo "Generating config file..."
+        store_admin_port=$(cat $ENV_FILE | grep STORE_ADMIN_LOCAL_PORT | cut -d'=' -f2)
+        zookeeper_port=$(cat $ENV_FILE | grep ZOOKEEPER_LOCAL_PORT | cut -d'=' -f2)
         base_port=$(find_freeport)  # Optional
         sed -e "s/\${base_port}/$base_port/g" \
             -e "s#\${image}#$hstream_image#g" \
@@ -25,7 +36,7 @@ generate_config() {
             -e "s/\${store_admin_port}/$store_admin_port/g" \
             script/config.yaml.tmpl > $CONFIG_FILE
     else
-        echo "Run './script/dev-tools start-services --services store zookeeper' first!"
+        echo "Error: $ENV_FILE not found. Please run 'start_required_services' first."
         exit 1
     fi
 }
@@ -34,6 +45,7 @@ if [ -f $CONFIG_FILE ]; then
     echo "Config file found"
 else
     echo "Config file not found, generating one..."
+    start_required_services
     generate_config
 fi
 
