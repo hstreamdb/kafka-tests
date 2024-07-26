@@ -83,6 +83,7 @@ dependencies {
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$versions.jackson"
     implementation "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:$versions.jackson"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-csv:$versions.jackson"
+    implementation "org.yaml:snakeyaml:2.2"
 
     implementation group: 'net.sf.jopt-simple', name: 'jopt-simple', version: '5.0.4'
 

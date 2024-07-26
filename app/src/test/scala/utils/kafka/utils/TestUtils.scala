@@ -150,8 +150,6 @@ object TestUtils extends Logging {
     }
   }
 
-  val currentTestTimeMillis = System.currentTimeMillis()
-
   /* Incorrect broker port which can used by kafka clients in tests. This port should not be used
     by any other service and hence we use a reserved port. */
   val IncorrectBrokerPort = 225
@@ -319,7 +317,7 @@ object TestUtils extends Logging {
     val configFile = sys.env.getOrElse("CONFIG_FILE", "").trim
     // Read from yaml file
     if (configFile.nonEmpty) {
-      parseConfigFile(configFile, startingIdNumber, endingIdNumber, testInfo.getDisplayName(), unusedPorts)
+      TestConfig.parseConfigFile(configFile, startingIdNumber, endingIdNumber, testInfo.getDisplayName(), unusedPorts)
     }
     // Generate
     else {
@@ -1527,9 +1525,10 @@ object TestUtils extends Logging {
 
     (0 until expectedNumPartitions).map { i =>
       new TopicPartition(topic, i) -> {
-        val p = description.getOrElse(
-          throw new IllegalStateException(s"Cannot get topic: $topic, partition: $i from server"))
-          .partitions().get(i)
+        val p = description
+          .getOrElse(throw new IllegalStateException(s"Cannot get topic: $topic, partition: $i from server"))
+          .partitions()
+          .get(i)
         new UpdateMetadataPartitionState()
           .setTopicName(topic)
           .setPartitionIndex(i)
@@ -2788,168 +2787,6 @@ object TestUtils extends Logging {
             e.getCause.isInstanceOf[UnknownTopicOrPartitionException] =>
         false
     }
-  }
-
-  private def parseConfigFile(
-      configFile: String,
-      startingIdNumber: Int,
-      endingIdNumber: Int,
-      testName: String,
-      unusedPorts: Seq[Int]
-  ): Seq[Properties] = {
-    val configs = readConfigFile(configFile)
-    val use = configs
-      .getOrElse("use", throw new IllegalArgumentException("use is required in config file"))
-      .asInstanceOf[String]
-    if (use == "broker_container") {
-      // Start hserver by docker
-      val brokerContainer = configs
-        .getOrElse(
-          "broker_container",
-          throw new IllegalArgumentException("broker_container is required in config file")
-        )
-        .asInstanceOf[java.util.Map[String, Object]]
-      return createBrokerConfigsFromBrokerContainer(
-        brokerContainer,
-        startingIdNumber,
-        endingIdNumber,
-        testName,
-        unusedPorts
-      )
-    } else if (use == "broker_connections") {
-      // Directly connect to brokers
-      val brokerConnections =
-        configs
-          .getOrElse(
-            "broker_connections",
-            throw new IllegalArgumentException("broker_connections is required in config file")
-          )
-          .asInstanceOf[java.util.List[java.util.Map[String, Object]]]
-      brokerConnections.asScala.map(_.asScala.toMap).map { config =>
-        val props = new Properties
-        config.foreach { case (k, v) => props.put(k, v.toString) }
-        props
-      }
-    } else {
-      throw new IllegalArgumentException("use must be one of [broker_container, broker_connections]")
-    }
-  }
-
-  private def readConfigFile(configFile: String): Map[String, Object] = {
-    val inputStream = new FileInputStream(configFile)
-    try {
-      val yaml = new Yaml()
-      yaml
-        .load(new InputStreamReader(inputStream, "UTF-8"))
-        .asInstanceOf[java.util.Map[String, Object]]
-        .asScala
-    } catch {
-      case e: Throwable => throw e
-    } finally {
-      inputStream.close()
-    }
-  }
-
-  private def createBrokerConfigsFromBrokerContainer(
-      brokerContainer: java.util.Map[String, Object],
-      startingIdNumber: Int,
-      endingIdNumber: Int,
-      testName: String,
-      unusedPorts: Seq[Int]
-  ): Seq[Properties] = {
-    val brokerConfig = brokerContainer.get("config").asInstanceOf[java.util.Map[String, Object]].asScala
-    val testingConfig: collection.mutable.Map[String, Object] =
-      brokerContainer
-        .get("testing_config")
-        .asInstanceOf[java.util.Map[String, Object]]
-        .asScala
-
-    val advertisedAddress = brokerConfig
-      .getOrElse(
-        "advertised.address",
-        throw new IllegalArgumentException("advertised.address is required in broker_container")
-      )
-      .asInstanceOf[String]
-    val basePort = testingConfig.get("base_port").asInstanceOf[Option[Int]]
-    val initMode = testingConfig.getOrElse("init_mode", "boot").asInstanceOf[String]
-    val commandTmpl = testingConfig
-      .getOrElse(
-        "command",
-        throw new IllegalArgumentException("command is required in testing_config")
-      )
-      .asInstanceOf[String]
-    // TODO: support rqlite
-    val metastorePort = testingConfig
-      .getOrElse("metastore_port", throw new IllegalArgumentException("metastore_port is required in testing_config"))
-      .asInstanceOf[Int]
-    val cleanContainerLog = testingConfig.getOrElse("container_logs_clean", false).asInstanceOf[Boolean]
-
-    var seedNodes = ""
-
-    // generate
-    val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
-      val prop = new Properties
-      val port = basePort match {
-        case None    => unusedPorts(idx * 2)
-        case Some(p) => p + idx * 2
-      }
-      val gossipPort = basePort match {
-        case None    => unusedPorts(idx * 2 + 1)
-        case Some(p) => p + idx * 2 + 1
-      }
-      if (initMode == "join") {
-        // we use a fixed port (the first gossipPort) for seed node when initMode is "join"
-        if (idx == 0) {
-          seedNodes = s"127.0.0.1:$gossipPort"
-        }
-      } else if (initMode == "boot") {
-        val sepr = if (idx == 0) "" else ","
-        seedNodes += s"${sepr}127.0.0.1:$gossipPort"
-      } else {
-        throw new IllegalArgumentException("init_mode must in [\"boot\", \"join\"]")
-      }
-      // broker config
-      prop.put("broker.id", nodeId.toString)
-      prop.put("port", port.toString)
-      prop.put("gossip.port", gossipPort.toString)
-      brokerConfig.foreach { case (k, v) => prop.put(k, v.toString) }
-      // testing config
-      val args = s"""--server-id $nodeId
-                --port $port --gossip-port $gossipPort
-                --advertised-address $advertisedAddress
-                --metastore-uri zk://127.0.0.1:$metastorePort
-                --store-config /data/store/logdevice.conf
-                """.stripMargin.linesIterator.mkString(" ").trim
-      (prop, args)
-    }
-    // The seedNodes is determined after all broker configs are created
-    return props.map {
-      case (prop, args) => {
-        val newArgs = s"$args --seed-nodes $seedNodes"
-        var newTestingConfig = testingConfig.clone()
-        newTestingConfig.update("command", commandTmpl.format(newArgs))
-        newTestingConfig.put("container_logs_dir", getContainerLogsDir(testName, cleanContainerLog))
-        prop.put("testing", newTestingConfig)
-        prop
-      }
-    }
-  }
-
-  private def formatTestNameAsFile(testName: String) = {
-    testName.replaceAll("""\(|\)|\s|\[|\]|=""", "_").replaceAll("(^_*)|(_*$)", "")
-  }
-
-  private def getContainerLogsDir(testName: String, cleanBefore: Boolean = false): Path = {
-    val testFilename = formatTestNameAsFile(testName)
-    val proj = sys.props.get("user.dir").getOrElse(".")
-    val containerLogsDir = s"$proj/build/reports/logs/$testFilename-$currentTestTimeMillis"
-    // FIXME: how about moving clean function into "QuorumTestHarness",
-    // Which means, in QuorumTestHarness, do "rm -rf $proj/build/reports/logs" once.
-    if (cleanBefore) {
-      // TODO: Safer way
-      s"bash -c \"rm -rf $proj/build/reports/logs/$testFilename-*\"".!
-    }
-    Paths.get(containerLogsDir)
   }
 
 }

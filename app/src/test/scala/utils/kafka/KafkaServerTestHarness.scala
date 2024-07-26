@@ -502,11 +502,7 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
     val potentiallyRegeneratedConfigs = configs
     alive = new Array[Boolean](potentiallyRegeneratedConfigs.length)
     Arrays.fill(alive, false)
-    var initPort = 0
     for (config <- potentiallyRegeneratedConfigs) {
-      if (initPort == 0 && config.testingConfig.nonEmpty) {
-        initPort = config.port
-      }
       val broker = createBrokerFromConfig(config)
       _brokers += broker
       if (startup) {
@@ -516,17 +512,7 @@ abstract class KafkaServerTestHarness extends QuorumTestHarness {
     }
 
     // For HStream
-    if (initPort != 0) {
-      KafkaBroker.initCluster(initPort)
-      // TODO: Theoretically, it is adequate to ask any node to check the cluster status.
-      //       However, due to the limitation of the current implementation, the cluster
-      //       status may be different between different nodes'views. This can cause infinite
-      //       block in some edge cases (lookup resources).
-      // KafkaBroker.awaitCluster(alive.length, initPort)
-      for (config <- potentiallyRegeneratedConfigs) {
-        KafkaBroker.awaitCluster(alive.length, config.port)
-      }
-    }
+    KafkaBroker.awaitCluster(alive.length, potentiallyRegeneratedConfigs)
   }
 
   private def createBrokerFromConfig(config: KafkaConfig): KafkaBroker = {
