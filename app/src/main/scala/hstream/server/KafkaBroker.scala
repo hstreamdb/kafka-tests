@@ -81,6 +81,11 @@ object KafkaBroker extends Logging {
     if (configs.isEmpty) {
       throw new RuntimeException("No broker configs found!")
     }
+
+    if (configs.head.testingConfig.isEmpty) {
+      info("No testingConfig found, skip awaitCluster")
+      return
+    }
     val initPort = configs.head.port
     val image = configs.head.testingConfig
       .getOrElse("image", throw new IllegalArgumentException("image is required"))
