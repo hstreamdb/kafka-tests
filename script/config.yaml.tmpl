@@ -15,7 +15,7 @@ broker_container:
     container_logs_clean: true
     command:
       # --experimental cpp
-      hstream-server kafka
+      ${server_exe}
         --bind-address 0.0.0.0
         --metrics-port 0
         --log-level debug

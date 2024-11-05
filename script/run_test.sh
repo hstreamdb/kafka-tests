@@ -2,6 +2,7 @@
 set -e
 
 hstream_image=${hstream_image:-hstreamdb/hstream:latest}
+server_exe=${server_exe:-"hstream-server kafka"}
 CONFIG_FILE=${CONFIG_FILE:-$PWD/local-data/config.yaml}
 
 find_freeport() {
@@ -31,6 +32,7 @@ generate_config() {
         base_port=$(find_freeport)  # Optional
         sed -e "s/\${base_port}/$base_port/g" \
             -e "s#\${image}#$hstream_image#g" \
+            -e "s#\${server_exe}#$server_exe#g" \
             -e "s/\${metastore_port}/$zookeeper_port/g" \
             -e "s#\${store_dir}#$PWD/local-data/logdevice#g" \
             -e "s/\${store_admin_port}/$store_admin_port/g" \

@@ -10,6 +10,10 @@ inputs:
     description: "hstream-image"
     required: true
     default: "hstreamdb/hstream:latest"
+  hstream-exe:
+    description: "hstream-exe"
+    required: true
+    default: "hstream-server kafka"
   distribution:
     description: "The distribution of java"
     required: true
@@ -54,7 +58,8 @@ runs:
         cd ${{ inputs.path }}
         echo "=> Run tests ${{ matrix.tests.tests_arg }} with kafka client ${{ matrix.tests.kafka_client_version }}"
         KAFKA_CLIENT_VERSION=${{ matrix.tests.kafka_client_version }} \
-        hstream_image=${{ inputs.hstream-image }} \
+        hstream_image="${{ inputs.hstream-image }}" \
+        server_exe="${{ inputs.hstream-exe }}" \
           ./script/run_test.sh -i --rerun-tasks ${{ matrix.tests.tests_arg }}
 
     - name: generate artifacts name (lagacy_tests)
