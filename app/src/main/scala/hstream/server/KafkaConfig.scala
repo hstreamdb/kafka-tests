@@ -412,6 +412,7 @@ object TestConfig {
     }
   }
 
+  // === spec 1: hstream
   private def parseTestingConfig1(
       brokerConfig: collection.mutable.Map[String, Object],
       testingConfig: collection.mutable.Map[String, Object],
@@ -491,6 +492,7 @@ object TestConfig {
     }
   }
 
+  // === spec 2: hornbill
   private def parseTestingConfig2(
       brokerConfig: collection.mutable.Map[String, Object],
       testingConfig: collection.mutable.Map[String, Object],
@@ -549,7 +551,8 @@ object TestConfig {
       brokerConfig.foreach { case (k, v) => prop.put(k, v.toString) }
       // testing config
       val args = s"""--server-id $nodeId
-                --port $port --advertised-address $advertisedAddress
+                --listeners plaintext://0.0.0.0:$port
+                --advertised-listeners plaintext://$advertisedAddress:$port
                 --meta-servers http://127.0.0.1:$metaServerPort
                 --store-config $storeConfig
                 """.stripMargin.linesIterator.mkString(" ").trim

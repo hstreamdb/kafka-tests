@@ -236,6 +236,7 @@ class KafkaBroker(
             val metaServerCmd =
               s"""docker run -d --network host --name $metaServerContainerName -v $storeConfig:$storeConfig:ro
                 $image hornbill meta --host 127.0.0.1 --port $metaServerPort
+                --metrics-port 0
                 --backend $storeConfig
             """.stripMargin.linesIterator.mkString(" ").trim
             info(s"=> Start meta server by: $metaServerCmd")
