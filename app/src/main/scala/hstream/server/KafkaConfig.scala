@@ -14,6 +14,7 @@
 package kafka.server
 
 import java.io._
+import java.net.{InetAddress, ServerSocket, Socket}
 import java.nio.file.{Path, Paths, StandardOpenOption}
 import java.util.Properties
 import org.apache.kafka.common.config.{
@@ -39,6 +40,60 @@ import kafka.utils.{CoreUtils, Logging}
 import scala.jdk.CollectionConverters._
 import kafka.utils.Implicits._
 import scala.util.Random
+
+// Copy from app/src/test/scala/utils/kafka/utils/TestUtils.scala
+object TestUtils {
+  def getUnusedPort(): Int = getUnusedPorts(0).head
+
+  def getUnusedPorts(n: Int): Seq[Int] = {
+    val sockPorts = (0 to n).map(_ => {
+      // There is no need to be done in a try/finally
+      val serverSocket = new ServerSocket(0)
+      val port = serverSocket.getLocalPort()
+      (serverSocket, port)
+    })
+    sockPorts.map {
+      case (serverSocket, port) => {
+        // close server
+        serverSocket.close()
+        // wait until the port is released
+        waitUntilTrue(
+          () => {
+            try {
+              val sock = new Socket("localhost", port)
+              sock.close()
+              false
+            } catch {
+              case _: Exception => true
+            }
+          },
+          s"Port $port is still in use",
+          waitTimeMs = 60000
+        )
+        port
+      }
+    }
+  }
+
+  def waitUntilTrue(
+      condition: () => Boolean,
+      msg: => String,
+      waitTimeMs: Long = 60000L,
+      pause: Long = 100L
+  ): Unit = {
+    val startTime = System.currentTimeMillis()
+    while (true) {
+      if (condition())
+        return
+      if (System.currentTimeMillis() > startTime + waitTimeMs)
+        throw new RuntimeException(s"Timed out waiting for condition: $msg")
+      Thread.sleep(waitTimeMs.min(pause))
+    }
+
+    // should never hit here
+    throw new RuntimeException("unexpected error")
+  }
+}
 
 object Defaults {
 
@@ -407,6 +462,8 @@ object TestConfig {
       parseTestingConfig1(brokerConfig, testingConfig, startingIdNumber, endingIdNumber, testName, unusedPorts);
     } else if (spec == 2) {
       parseTestingConfig2(brokerConfig, testingConfig, startingIdNumber, endingIdNumber, testName, unusedPorts);
+    } else if (spec == 3) {
+      parseTestingConfig3(brokerConfig, testingConfig, startingIdNumber, endingIdNumber, testName, unusedPorts);
     } else {
       throw new IllegalArgumentException("Invalid testing spec!")
     }
@@ -566,6 +623,76 @@ object TestConfig {
         newTestingConfig.put("container_logs_dir", getContainerLogsDir(testName, cleanContainerLog))
         newTestingConfig.put("metaserver_port", metaServerPort.asInstanceOf[Object])
         newTestingConfig.put("metaserver_container_name", metaServerContainerName)
+        prop.put("testing", newTestingConfig)
+        prop
+      }
+    }
+  }
+
+  // === spec 3: flowmq
+  private def parseTestingConfig3(
+      brokerConfig: collection.mutable.Map[String, Object],
+      testingConfig: collection.mutable.Map[String, Object],
+      startingIdNumber: Int,
+      endingIdNumber: Int,
+      testName: String,
+      unusedPorts: Seq[Int]
+  ): Seq[Properties] = {
+    val advertisedAddress = brokerConfig
+      .getOrElse(
+        "advertised.address",
+        throw new IllegalArgumentException("advertised.address is required in broker_container")
+      )
+      .asInstanceOf[String]
+    val basePort = testingConfig.get("base_port").asInstanceOf[Option[Int]]
+    val commandTmpl = testingConfig
+      .getOrElse(
+        "command",
+        throw new IllegalArgumentException("command is required in testing_config")
+      )
+      .asInstanceOf[String]
+    val cleanContainerLog = testingConfig.getOrElse("container_logs_clean", false).asInstanceOf[Boolean]
+    val storeConfig = testingConfig.getOrElse(
+      "store_config",
+      throw new IllegalArgumentException("store_config is required in testing_config")
+    )
+
+    // generate
+    val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
+      val prop = new Properties
+
+      // For unusedPorts,
+      //
+      // 1. Choose 0, 2, 4, ... as kafka port
+      // 2. Choose 1, 3, 5, ... as mqtt port
+      val port = basePort match {
+        case None    => unusedPorts(idx * 2)
+        case Some(p) => p + idx * 2
+      }
+      val mqttPort = basePort match {
+        case None    => unusedPorts(idx * 2 + 1)
+        case Some(p) => p + idx * 2 + 1
+      }
+      val httpPort = TestUtils.getUnusedPort();
+
+      // broker config
+      prop.put("broker.id", nodeId.toString)
+      prop.put("port", port.toString)
+      // prop.put("gossip.port", "0")
+      brokerConfig.foreach { case (k, v) => prop.put(k, v.toString) }
+      // testing config
+      val args = s"""--port $mqttPort --http-api-port $httpPort
+                --with-kafka $port --kafka-advertised-address $advertisedAddress
+                --cluster-file $storeConfig
+                """.stripMargin.linesIterator.mkString(" ").trim
+      (prop, args)
+    }
+    // The seedNodes is determined after all broker configs are created
+    return props.map {
+      case (prop, args) => {
+        var newTestingConfig = testingConfig.clone()
+        newTestingConfig.update("command", commandTmpl.format(args))
+        newTestingConfig.put("container_logs_dir", getContainerLogsDir(testName, cleanContainerLog))
         prop.put("testing", newTestingConfig)
         prop
       }

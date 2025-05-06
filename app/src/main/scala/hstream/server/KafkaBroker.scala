@@ -111,6 +111,8 @@ object KafkaBroker extends Logging {
       for (config <- configs) {
         awaitNode(image, "hornbill ctl", num, config.port, timeout)
       }
+    } else if (spec == 3) {
+      // TODO: flowmq does not support cluster yet
     } else {
       throw new NotImplementedError("awaitCluster: spec is invalid!")
     }
@@ -251,6 +253,20 @@ class KafkaBroker(
             s"docker run -d --network host --name $containerName -v $storeConfig:$storeConfig:ro $image $command $extraProps"
           info(s"=> Start hserver by: $hserverCmd")
           Utils.runCommand(hserverCmd)
+        }
+        // === spec 3: flowmq
+        else if (spec == 3) {
+          val storeConfig = config.testingConfig
+            .getOrElse("store_config", throw new IllegalArgumentException("store_config is required"))
+            .asInstanceOf[String]
+          // TODO: $extraProps
+          val dockerCmd =
+            s"docker run -d --network host --name $containerName -v $storeConfig:$storeConfig:ro $image $command"
+          info(s"=> Start flowmq by: $dockerCmd")
+          val code = dockerCmd.!
+          if (code != 0) {
+            throw new RuntimeException(s"Failed to start broker, exit code: $code")
+          }
         } else {
           throw new NotImplementedError("startup: spec is invalid!")
         }
@@ -338,6 +354,17 @@ class KafkaBroker(
             .replace("${store_config}", storeConfig)
           info("=> Delete all data in storage...")
           Utils.runCommand(storeRmCmd)
+        } else if (spec == 3) {
+          // Remove storage
+          val storeConfig = config.testingConfig
+            .getOrElse("store_config", throw new IllegalArgumentException("store_config is required"))
+            .asInstanceOf[String]
+          val storeRmCmd = config.testingConfig
+            .getOrElse("store_rm_command", throw new IllegalArgumentException("store_rm_command is required"))
+            .asInstanceOf[String]
+            .replace("${store_config}", storeConfig)
+          info(s"=> Delete all data in storage by command: $storeRmCmd")
+          Utils.runCommand(storeRmCmd)
         } else {
           throw new NotImplementedError("shutdown: spec is invalid!")
         }
@@ -363,7 +390,7 @@ class KafkaBroker(
     val ret = Utils.waitPort(port, retries)
     if (!ret) {
       s"docker logs $containerName".!
-      throw new RuntimeException("Failed to start hstream!")
+      throw new RuntimeException("Failed to start the broker!")
     }
   }
 
