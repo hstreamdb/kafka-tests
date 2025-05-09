@@ -256,12 +256,14 @@ class KafkaBroker(
         }
         // === spec 3: flowmq
         else if (spec == 3) {
+          val extraFlowmqProps = config.hstreamKafkaBrokerProperties
+            .map { case (k, v) => { val newk = s"$k".replace(".", "-"); s"--knob-kafka-$newk $v" } }
+            .mkString(" ")
           val storeConfig = config.testingConfig
             .getOrElse("store_config", throw new IllegalArgumentException("store_config is required"))
             .asInstanceOf[String]
-          // TODO: $extraProps
           val dockerCmd =
-            s"docker run -d --network host --name $containerName -v $storeConfig:$storeConfig:ro $image $command"
+            s"docker run -d --network host --name $containerName -v $storeConfig:$storeConfig:ro $image $command $extraFlowmqProps"
           info(s"=> Start flowmq by: $dockerCmd")
           val code = dockerCmd.!
           if (code != 0) {
