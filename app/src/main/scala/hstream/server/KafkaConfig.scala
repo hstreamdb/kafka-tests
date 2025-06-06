@@ -656,6 +656,15 @@ object TestConfig {
       "store_config",
       throw new IllegalArgumentException("store_config is required in testing_config")
     )
+    val storeType = testingConfig
+      .getOrElse(
+        "store_type",
+        throw new IllegalArgumentException("store_config is required in testing_config")
+      )
+      .asInstanceOf[String]
+    if (storeType != "fdb" && storeType != "sqlite") {
+      throw new IllegalArgumentException("store_type must be one of [fdb, sqlite]")
+    }
 
     // generate
     val props = (startingIdNumber to endingIdNumber).zipWithIndex.map { case (nodeId, idx) =>
@@ -681,9 +690,15 @@ object TestConfig {
       // prop.put("gossip.port", "0")
       brokerConfig.foreach { case (k, v) => prop.put(k, v.toString) }
       // testing config
+      val storeConfigArg =
+        if (storeType == "fdb") {
+          s"--storage fdb --cluster-file $storeConfig"
+        } else if (storeType == "sqlite") {
+          s"--storage sqlite --data-dir $storeConfig"
+        }
       val args = s"""--port $mqttPort --http-api-port $httpPort
                 --with-kafka $port --kafka-advertised-address $advertisedAddress
-                --cluster-file $storeConfig
+                $storeConfigArg
                 """.stripMargin.linesIterator.mkString(" ").trim
       (prop, args)
     }

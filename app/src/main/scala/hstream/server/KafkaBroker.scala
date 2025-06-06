@@ -263,7 +263,7 @@ class KafkaBroker(
             .getOrElse("store_config", throw new IllegalArgumentException("store_config is required"))
             .asInstanceOf[String]
           val dockerCmd =
-            s"docker run -d --network host --name $containerName -v $storeConfig:$storeConfig:ro $image $command $extraFlowmqProps"
+            s"docker run -d --network host --name $containerName -v $storeConfig:$storeConfig $image $command $extraFlowmqProps"
           info(s"=> Start flowmq by: $dockerCmd")
           val code = dockerCmd.!
           if (code != 0) {
@@ -334,8 +334,9 @@ class KafkaBroker(
           info("=> Delete all zk nodes...")
           // Use the same zk version as scripe/dev-tools to avoid pulling new image
           s"docker run --rm --network host zookeeper:3.6 zkCli.sh -server 127.0.0.1:$metastorePort deleteall /hstream".!
-          // === spec 2: hornbill
-        } else if (spec == 2) {
+        }
+        // === spec 2: hornbill
+        else if (spec == 2) {
           // Remove meta server container
           val metaServerContainerName = config.testingConfig
             .getOrElse(
@@ -356,7 +357,9 @@ class KafkaBroker(
             .replace("${store_config}", storeConfig)
           info("=> Delete all data in storage...")
           Utils.runCommand(storeRmCmd)
-        } else if (spec == 3) {
+        }
+        // === spec 3: flowmq
+        else if (spec == 3) {
           // Remove storage
           val storeConfig = config.testingConfig
             .getOrElse("store_config", throw new IllegalArgumentException("store_config is required"))
