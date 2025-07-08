@@ -47,7 +47,7 @@
   */
  @Timeout(120)
  abstract class BaseAdminIntegrationTest extends IntegrationTestHarness with Logging {
-   def brokerCount = 3
+   override def brokerCount: Int = sys.env.getOrElse("BROKER_COUNT", "3").toInt
 //   override def logDirCount = 2
 
    var testInfo: TestInfo = _

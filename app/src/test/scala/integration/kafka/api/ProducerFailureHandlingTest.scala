@@ -32,7 +32,7 @@ class ProducerFailureHandlingTest extends KafkaServerTestHarness {
   private val replicaFetchMaxPartitionBytes = serverMessageMaxBytes + 200
   private val replicaFetchMaxResponseBytes = replicaFetchMaxPartitionBytes + 200
 
-  val numServers = 2
+  val numServers: Int = sys.env.getOrElse("BROKER_COUNT", "2").toInt
 
   // KAFKA_TO_HSTREAM
   private var testInfo: TestInfo = _

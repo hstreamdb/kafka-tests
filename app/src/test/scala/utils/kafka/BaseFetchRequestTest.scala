@@ -103,7 +103,7 @@ class BaseFetchRequestTest extends BaseRequestTest {
     configs.foreach { case (k, v) => topicConfig.setProperty(k, v) }
     topics.flatMap { topic =>
       val partitionToLeader =
-        createTopic(topic, numPartitions = numPartitions, replicationFactor = 2, topicConfig = topicConfig)
+        createTopic(topic, numPartitions = numPartitions, replicationFactor = brokerCount, topicConfig = topicConfig)
       partitionToLeader.map { case (partition, leader) => new TopicPartition(topic, partition) -> leader }
     }.toMap
   }

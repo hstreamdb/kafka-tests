@@ -44,7 +44,7 @@ abstract class BaseProducerSendTest extends KafkaServerTestHarness {
 
   def generateConfigs: scala.collection.Seq[KafkaConfig] = {
     val overridingProps = new Properties()
-    val numServers = 2
+    val numServers = sys.env.getOrElse("BROKER_COUNT", "2").toInt
     overridingProps.put(KafkaConfig.NumPartitionsProp, 4.toString)
     // TODO: TMP_FOR_HSTREAM
     // TestUtils.createBrokerConfigs(numServers, zkConnectOrNull, false, interBrokerSecurityProtocol = Some(securityProtocol),
