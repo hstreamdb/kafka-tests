@@ -2030,6 +2030,8 @@ class PlaintextConsumerTest extends BaseConsumerTest {
     val consumer1Config = new Properties(consumerConfig)
     consumer1Config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     consumer1Config.put(ConsumerConfig.CLIENT_ID_CONFIG, "consumer1")
+    // increase minBytes to ensure fetch enough records
+    consumer1Config.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1024)
     val consumer1 =
       createConsumer(configOverrides = consumer1Config, configsToRemove = List(ConsumerConfig.GROUP_ID_CONFIG))
 
@@ -2037,12 +2039,16 @@ class PlaintextConsumerTest extends BaseConsumerTest {
     val consumer2Config = new Properties(consumerConfig)
     consumer2Config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
     consumer2Config.put(ConsumerConfig.CLIENT_ID_CONFIG, "consumer2")
+    // increase minBytes to ensure fetch enough records
+    consumer2Config.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1024)
     val consumer2 =
       createConsumer(configOverrides = consumer2Config, configsToRemove = List(ConsumerConfig.GROUP_ID_CONFIG))
 
     // consumer 3 uses the default group id and starts from an explicit offset
     val consumer3Config = new Properties(consumerConfig)
     consumer3Config.put(ConsumerConfig.CLIENT_ID_CONFIG, "consumer3")
+    // increase minBytes to ensure fetch enough records
+    consumer3Config.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1024)
     val consumer3 =
       createConsumer(configOverrides = consumer3Config, configsToRemove = List(ConsumerConfig.GROUP_ID_CONFIG))
 

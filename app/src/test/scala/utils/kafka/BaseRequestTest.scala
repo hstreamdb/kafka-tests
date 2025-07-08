@@ -22,7 +22,14 @@ import scala.collection.Seq
 abstract class BaseRequestTest extends IntegrationTestHarness {
 
   // If required, set number of brokers
-  override def brokerCount: Int = 3
+  //
+  // Some of our brokers may not support cluster mode yet, so here we may need
+  // to set brokerCount = 1. This is why we use the environment variable BROKER_COUNT
+  //
+  // Origin code:
+  //
+  // override def brokerCount: Int = 3
+  override def brokerCount: Int = sys.env.getOrElse("BROKER_COUNT", "3").toInt
 
   // If required, override properties by mutating the passed Properties object
   protected def brokerPropertyOverrides(properties: Properties): Unit = {}

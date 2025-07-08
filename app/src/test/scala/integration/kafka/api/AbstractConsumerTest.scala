@@ -42,14 +42,6 @@ import scala.collection.mutable
 abstract class AbstractConsumerTest extends BaseRequestTest {
 
   val epsilon = 0.1
-  // XXX
-  // Some of our brokers may not support cluster mode yet, so here we may need
-  // to set brokerCount = 1. This is why we use the environment variable BROKER_COUNT
-  //
-  // Origin code:
-  //
-  // override def brokerCount: Int = 3
-  override def brokerCount: Int = sys.env.getOrElse("BROKER_COUNT", "3").toInt
 
   val topic = "topic"
   val part = 0
